@@ -2,7 +2,8 @@ import { sql, type SQL } from "drizzle-orm";
 import { getTableConfig, integer, jsonb, pgTable, PgDialect, text } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import { bm25Field, bm25Index, jsonText, matchAll, pdbAlias, tokenize, tokenizers } from "./search.js";
+import { bm25Field, bm25Index, jsonText, pdbAlias} from "./indexing.js";
+import {tokenizers } from "./tokenizer.js"
 
 const products = pgTable("products", {
   id: integer("id").primaryKey(),
@@ -44,17 +45,9 @@ describe("ParadeDB indexing helpers", () => {
       "((\"rating\" + 1)::pdb.alias('next_rating'))",
     );
   });
-
-  it("renders tokenizer casts for search expressions", () => {
-    expect(render(tokenize(products.description, tokenizers.ngram(3, 3, { positions: true })))).toBe(
-      "\"description\"::pdb.ngram(3,3,'positions=true')",
-    );
-    expect(render(matchAll(products.description, "running shoes", tokenizers.simple({ stemmer: "english" })))).toBe(
-      "\"description\" &&& $1::pdb.simple('stemmer=english')",
-    );
-  });
 });
 
 function render(value: SQL): string {
   return dialect.sqlToQuery(value, "indexes").sql;
 }
+
