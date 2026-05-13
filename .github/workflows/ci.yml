@@ -39,5 +39,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Set up test database
+        run: pnpm db:setup
+
       - name: Run tests
         run: pnpm test
