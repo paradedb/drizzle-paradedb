@@ -7,42 +7,67 @@ export type Tokenizer = {
   options?: TokenizerOptions;
 };
 
-export function makeTokenizer(
-  name: string,
-  args: readonly TokenizerArg[] = [],
-  options?: TokenizerOptions,
-): Tokenizer {
-  return { name, args, options };
+export function unicodeWords(options?: TokenizerOptions) {
+  return { name: "unicode_words", args: [], options };
 }
 
-export function unicodeWords(options?: TokenizerOptions) {
-  return makeTokenizer("unicode_words", [], options);
-}
 export function simple(options?: TokenizerOptions) {
-  return makeTokenizer("simple", [], options);
+  return { name: "simple", args: [], options };
 }
+
 export function icu(options?: TokenizerOptions) {
-  return makeTokenizer("icu", [], options);
+  return { name: "icu", args: [], options };
 }
+
+export function chineseCompatible(options?: TokenizerOptions) {
+  return { name: "chinese_compatible", args: [], options };
+}
+
+export function jieba(options?: TokenizerOptions) {
+  return { name: "jieba", args: [], options };
+}
+
+export function lindera(
+  language: "chinese" | "japanese" | "korean",
+  options?: TokenizerOptions,
+) {
+  return { name: "lindera", args: [language], options };
+}
+
 export function literal(options?: TokenizerOptions) {
-  return makeTokenizer("literal", [], options);
+  return { name: "literal", args: [], options };
 }
+
 export function literalNormalized(options?: TokenizerOptions) {
-  return makeTokenizer("literal_normalized", [], options);
+  return { name: "literal_normalized", args: [], options };
 }
+
 export function ngram(
   minGram: number,
   maxGram: number,
   options?: TokenizerOptions,
 ) {
-  return makeTokenizer("ngram", [minGram, maxGram], options);
+  return { name: "ngram", args: [minGram, maxGram], options };
 }
+
 export function edgeNgram(
   minGram: number,
   maxGram: number,
   options?: TokenizerOptions,
 ) {
-  return makeTokenizer("edge_ngram", [minGram, maxGram], options);
+  return { name: "edge_ngram", args: [minGram, maxGram], options };
+}
+
+export function regexPattern(pattern: string, options?: TokenizerOptions) {
+  return { name: "regex_pattern", args: [pattern], options };
+}
+
+export function sourceCode(options?: TokenizerOptions) {
+  return { name: "source_code", args: [], options };
+}
+
+export function whitespace(options?: TokenizerOptions) {
+  return { name: "whitespace", args: [], options };
 }
 
 function renderArg(value: TokenizerArg): string {
