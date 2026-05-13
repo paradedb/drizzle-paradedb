@@ -60,9 +60,9 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", "description" from "mock_items" where "mock_items"."description" &&& ARRAY['running', 'shoes']`,
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& ARRAY[$1, $2]`,
     );
-    expect(generated.params).toStrictEqual([]);
+    expect(generated.params).toStrictEqual(["running", "shoes"]);
 
     await query;
   });
