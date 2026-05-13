@@ -1,6 +1,8 @@
 import { boolean, customType, date, integer, jsonb, pgTable, text, time, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { bm25Field, bm25Index, tokenizers } from "./search.js";
+import { bm25Field, bm25Index} from "./indexing.js";
+import { tokenizer } from "./tokenizer.js";
+
 
 const int4range = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -22,8 +24,8 @@ export const mockItems = pgTable("mock_items", {
 }, (table) => [
   bm25Index("mock_items_search_idx").on(
     table.id,
-    bm25Field(table.description, tokenizers.simple({ stemmer: "english" })),
-    bm25Field(table.category, tokenizers.literal()),
+    bm25Field(table.description, tokenizer.simple({ stemmer: "english" })),
+    bm25Field(table.category, tokenizer.literal()),
     table.rating,
     table.inStock,
     table.metadata,
