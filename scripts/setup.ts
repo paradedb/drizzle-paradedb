@@ -14,7 +14,9 @@ await db.execute(sql`
   END $$;
 `);
 
-const [{ count }] = await db.execute<{ count: string }>(sql`SELECT count(*) FROM mock_items`);
+const [{ count }] = await db.execute<{ count: string }>(
+  sql`SELECT count(*) FROM mock_items`,
+);
 
 console.log(`mock_items is ready with ${count} rows`);
 

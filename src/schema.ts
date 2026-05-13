@@ -1,8 +1,18 @@
-import { boolean, customType, date, integer, jsonb, pgTable, text, time, timestamp, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  date,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  time,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 
-import { bm25Field, bm25Index} from "./indexing.js";
+import { bm25Field, bm25Index } from "./indexing.js";
 import { tokenizer } from "./tokenizer.js";
-
 
 const int4range = customType<{ data: string; driverData: string }>({
   dataType() {
@@ -10,28 +20,32 @@ const int4range = customType<{ data: string; driverData: string }>({
   },
 });
 
-export const mockItems = pgTable("mock_items", {
-  id: integer("id").primaryKey(),
-  description: text("description"),
-  rating: integer("rating"),
-  category: varchar("category", { length: 255 }),
-  inStock: boolean("in_stock"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at"),
-  lastUpdatedDate: date("last_updated_date"),
-  latestAvailableTime: time("latest_available_time"),
-  weightRange: int4range("weight_range"),
-}, (table) => [
-  bm25Index("mock_items_search_idx").on(
-    table.id,
-    bm25Field(table.description, tokenizer.simple({ stemmer: "english" })),
-    bm25Field(table.category, tokenizer.literal()),
-    table.rating,
-    table.inStock,
-    table.metadata,
-    table.createdAt,
-    table.lastUpdatedDate,
-    table.latestAvailableTime,
-    table.weightRange,
-  ),
-]);
+export const mockItems = pgTable(
+  "mock_items",
+  {
+    id: integer("id").primaryKey(),
+    description: text("description"),
+    rating: integer("rating"),
+    category: varchar("category", { length: 255 }),
+    inStock: boolean("in_stock"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at"),
+    lastUpdatedDate: date("last_updated_date"),
+    latestAvailableTime: time("latest_available_time"),
+    weightRange: int4range("weight_range"),
+  },
+  (table) => [
+    bm25Index("mock_items_search_idx").on(
+      table.id,
+      bm25Field(table.description, tokenizer.simple({ stemmer: "english" })),
+      bm25Field(table.category, tokenizer.literal()),
+      table.rating,
+      table.inStock,
+      table.metadata,
+      table.createdAt,
+      table.lastUpdatedDate,
+      table.latestAvailableTime,
+      table.weightRange,
+    ),
+  ],
+);

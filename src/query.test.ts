@@ -37,11 +37,13 @@ describe("ParadeDB query language", () => {
         description: mockItems.description,
       })
       .from(mockItems)
-      .where(search.matchAll(mockItems.description, "running shoes"))
+      .where(search.matchAll(mockItems.description, "running shoes"));
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1`,
+    );
     expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;
@@ -53,11 +55,17 @@ describe("ParadeDB query language", () => {
         description: mockItems.description,
       })
       .from(mockItems)
-      .where(search.matchAll(mockItems.description, "running shoes", {relevance: {kind: "boost", value: 1.5}}))
+      .where(
+        search.matchAll(mockItems.description, "running shoes", {
+          relevance: { kind: "boost", value: 1.5 },
+        }),
+      );
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.boost(1.5)`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.boost(1.5)`,
+    );
     expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;
@@ -69,11 +77,17 @@ describe("ParadeDB query language", () => {
         description: mockItems.description,
       })
       .from(mockItems)
-      .where(search.matchAll(mockItems.description, "running shoes", {relevance: {kind: "const", value: 1.5}}))
+      .where(
+        search.matchAll(mockItems.description, "running shoes", {
+          relevance: { kind: "const", value: 1.5 },
+        }),
+      );
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.const(1.5)`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.const(1.5)`,
+    );
     expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;
@@ -85,11 +99,17 @@ describe("ParadeDB query language", () => {
         description: mockItems.description,
       })
       .from(mockItems)
-      .where(search.matchAll(mockItems.description, "running shoes", {tokenizer: tokenizer.simple()}))
+      .where(
+        search.matchAll(mockItems.description, "running shoes", {
+          tokenizer: tokenizer.simple(),
+        }),
+      );
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple`,
+    );
     expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;
@@ -101,11 +121,18 @@ describe("ParadeDB query language", () => {
         description: mockItems.description,
       })
       .from(mockItems)
-      .where(search.matchAll(mockItems.description, "running shoes", {tokenizer: tokenizer.simple(), relevance: {kind: "const", value: 1.5}}))
+      .where(
+        search.matchAll(mockItems.description, "running shoes", {
+          tokenizer: tokenizer.simple(),
+          relevance: { kind: "const", value: 1.5 },
+        }),
+      );
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple::pdb.const(1.5)`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple::pdb.const(1.5)`,
+    );
     expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;

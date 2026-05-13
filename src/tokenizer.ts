@@ -7,7 +7,11 @@ export type Tokenizer = {
   options?: TokenizerOptions;
 };
 
-export function makeTokenizer(name: string, args: readonly TokenizerArg[] = [], options?: TokenizerOptions): Tokenizer {
+export function makeTokenizer(
+  name: string,
+  args: readonly TokenizerArg[] = [],
+  options?: TokenizerOptions,
+): Tokenizer {
   return { name, args, options };
 }
 
@@ -26,10 +30,18 @@ export function literal(options?: TokenizerOptions) {
 export function literalNormalized(options?: TokenizerOptions) {
   return makeTokenizer("literal_normalized", [], options);
 }
-export function ngram(minGram: number, maxGram: number, options?: TokenizerOptions) {
+export function ngram(
+  minGram: number,
+  maxGram: number,
+  options?: TokenizerOptions,
+) {
   return makeTokenizer("ngram", [minGram, maxGram], options);
 }
-export function edgeNgram(minGram: number, maxGram: number, options?: TokenizerOptions) {
+export function edgeNgram(
+  minGram: number,
+  maxGram: number,
+  options?: TokenizerOptions,
+) {
   return makeTokenizer("edge_ngram", [minGram, maxGram], options);
 }
 
@@ -57,8 +69,11 @@ function quote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-
-export function renderTokenizer({ name, args = [], options }: Tokenizer): string {
+export function renderTokenizer({
+  name,
+  args = [],
+  options,
+}: Tokenizer): string {
   const renderedArgs = args.map(renderArg);
   for (const [key, value] of Object.entries(options ?? {})) {
     renderedArgs.push(quote(`${key}=${renderOptionValue(value)}`));
