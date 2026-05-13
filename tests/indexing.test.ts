@@ -9,8 +9,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import { bm25Field, bm25Index, jsonText, pdbAlias } from "./indexing.js";
-import { tokenizer } from "./index.js";
+import { bm25Field, bm25Index, jsonText, pdbAlias } from "../src/indexing.js";
+import { tokenizer } from "../src/index.js";
 
 const products = pgTable(
   "products",

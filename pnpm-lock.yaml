@@ -11,13 +11,13 @@ importers:
       drizzle-orm:
         specifier: 1.0.0-rc.2
         version: 1.0.0-rc.2(postgres@3.4.9)
-      postgres:
-        specifier: ^3.4.9
-        version: 3.4.9
     devDependencies:
       '@types/node':
         specifier: ^25.7.0
         version: 25.7.0
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
       prettier:
         specifier: ^3.8.3
         version: 3.8.3

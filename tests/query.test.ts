@@ -1,9 +1,9 @@
 import { desc, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { search, tokenizer } from "../src/index.js";
 import { client, db } from "./db.js";
-import { search, tokenizer } from "./index.js";
-import { mockItems } from "./schema.js";
+import { mockItems } from "./mock-items.js";
 
 beforeAll(async () => {
   await db.execute(sql`
