@@ -17,12 +17,18 @@ export function score(key: SQLWrapper): SQL<number> {
 
 export function matchAll(
   column: SQLWrapper,
-  value: SearchValue,
+  value: string | string[],
   options: Options = {},
 ): SQL {
-  if (options.tokenizer) value = tokenize(value, options.tokenizer);
-  if (options.relevance) value = renderRelevance(value, options.relevance);
-  return sql`${column} &&& ${value}`;
+  var term: SearchValue;
+  if (Array.isArray(value)) {
+    term = sql`ARRAY[${sql.raw(value.map(quote).join(', '))}]`
+  } else {
+    term = value;
+  }
+  if (options.tokenizer) term = tokenize(term, options.tokenizer);
+  if (options.relevance) term = renderRelevance(term, options.relevance);
+  return sql`${column} &&& ${term}`;
 }
 
 function tokenize(value: SearchValue, tokenizer: Tokenizer): SQL {
@@ -32,3 +38,9 @@ function tokenize(value: SearchValue, tokenizer: Tokenizer): SQL {
 function renderRelevance(value: SearchValue, relevance: Relevance): SQL {
   return sql`${value}::pdb.${sql.raw(relevance.kind)}(${sql.raw(String(relevance.value))})`;
 }
+
+// TODO: Share this?
+function quote(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+

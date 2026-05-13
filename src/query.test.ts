@@ -48,6 +48,24 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs matchAll with an array", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, ["running", "shoes"]));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& ARRAY['running', 'shoes']`,
+    );
+    expect(generated.params).toStrictEqual([]);
+
+    await query;
+  });
   it("runs matchAll with boost", async () => {
     const query = db
       .select({
