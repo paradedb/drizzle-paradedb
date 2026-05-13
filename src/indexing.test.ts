@@ -3,7 +3,7 @@ import { getTableConfig, integer, jsonb, pgTable, PgDialect, text } from "drizzl
 import { describe, expect, it } from "vitest";
 
 import { bm25Field, bm25Index, jsonText, pdbAlias} from "./indexing.js";
-import {tokenizers } from "./tokenizer.js"
+import {tokenizer } from "./tokenizer.js"
 
 const products = pgTable("products", {
   id: integer("id").primaryKey(),
@@ -14,8 +14,8 @@ const products = pgTable("products", {
   bm25Index("products_bm25_idx")
     .on(
       table.id,
-      bm25Field(table.description, tokenizers.ngram(3, 3, { positions: true })),
-      bm25Field(jsonText(table.metadata, "color"), tokenizers.literal({ alias: "metadata_color" })),
+      bm25Field(table.description, tokenizer.ngram(3, 3, { positions: true })),
+      bm25Field(jsonText(table.metadata, "color"), tokenizer.literal({ alias: "metadata_color" })),
       pdbAlias(sql`${table.rating} + 1`, "next_rating"),
     )
     .where(sql`${table.rating} > 0`),
@@ -35,10 +35,10 @@ describe("ParadeDB indexing helpers", () => {
   });
 
   it("renders tokenizer casts for index expressions", () => {
-    expect(render(bm25Field(products.description, tokenizers.ngram(3, 3, { positions: true })))).toBe(
+    expect(render(bm25Field(products.description, tokenizer.ngram(3, 3, { positions: true })))).toBe(
       "((\"description\")::pdb.ngram(3,3,'positions=true'))",
     );
-    expect(render(bm25Field(jsonText(products.metadata, "color"), tokenizers.literal({ alias: "metadata_color" })))).toBe(
+    expect(render(bm25Field(jsonText(products.metadata, "color"), tokenizer.literal({ alias: "metadata_color" })))).toBe(
       "((\"metadata\" ->> 'color')::pdb.literal('alias=metadata_color'))",
     );
     expect(render(pdbAlias(sql`${products.rating} + 1`, "next_rating"))).toBe(

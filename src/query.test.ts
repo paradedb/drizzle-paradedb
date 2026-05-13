@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { client, db } from "./db.js";
 import { search } from "./index.js";
 import { mockItems } from "./schema.js";
+// TODO make a `tokenizer` namespace instead?
+import { tokenizer } from "./tokenizer.js";
 
 beforeAll(async () => {
   await db.execute(sql`
@@ -30,22 +32,83 @@ afterAll(async () => {
 });
 
 describe("ParadeDB query language", () => {
-  it("builds and runs a match conjunction query", async () => {
+  it("runs basic matchAll", async () => {
     const query = db
       .select({
+        id: mockItems.id,
         description: mockItems.description,
-        rating: mockItems.rating,
-        category: mockItems.category,
       })
       .from(mockItems)
       .where(search.matchAll(mockItems.description, "running shoes"))
-      .orderBy(desc(search.score(mockItems.id)))
-      .limit(5);
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "description", "rating", "category" from "mock_items" where "mock_items"."description" &&& $1 order by pdb.score("mock_items"."id") desc limit $2`);
-    expect(generated.params).toStrictEqual(["running shoes", 5]);
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1`);
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs matchAll with boost", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, "running shoes", {relevance: {kind: "boost", value: 1.5}}))
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.boost(1.5)`);
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs matchAll with const", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, "running shoes", {relevance: {kind: "const", value: 1.5}}))
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.const(1.5)`);
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs matchAll with tokenizer", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, "running shoes", {tokenizer: tokenizer.simple()}))
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple`);
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs matchAll with tokenizer and relevance tuning", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, "running shoes", {tokenizer: tokenizer.simple(), relevance: {kind: "const", value: 1.5}}))
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple::pdb.const(1.5)`);
+    expect(generated.params).toStrictEqual(["running shoes"]);
 
     await query;
   });

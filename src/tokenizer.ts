@@ -7,20 +7,20 @@ export type Tokenizer = {
   options?: TokenizerOptions;
 };
 
-export function tokenizer(name: string, args: readonly TokenizerArg[] = [], options?: TokenizerOptions): Tokenizer {
+export function makeTokenizer(name: string, args: readonly TokenizerArg[] = [], options?: TokenizerOptions): Tokenizer {
   return { name, args, options };
 }
 
-export const tokenizers = {
-  unicodeWords: (options?: TokenizerOptions) => tokenizer("unicode_words", [], options),
-  simple: (options?: TokenizerOptions) => tokenizer("simple", [], options),
-  icu: (options?: TokenizerOptions) => tokenizer("icu", [], options),
-  literal: (options?: TokenizerOptions) => tokenizer("literal", [], options),
-  literalNormalized: (options?: TokenizerOptions) => tokenizer("literal_normalized", [], options),
+export const tokenizer = {
+  unicodeWords: (options?: TokenizerOptions) => makeTokenizer("unicode_words", [], options),
+  simple: (options?: TokenizerOptions) => makeTokenizer("simple", [], options),
+  icu: (options?: TokenizerOptions) => makeTokenizer("icu", [], options),
+  literal: (options?: TokenizerOptions) => makeTokenizer("literal", [], options),
+  literalNormalized: (options?: TokenizerOptions) => makeTokenizer("literal_normalized", [], options),
   ngram: (minGram: number, maxGram: number, options?: TokenizerOptions) =>
-    tokenizer("ngram", [minGram, maxGram], options),
+    makeTokenizer("ngram", [minGram, maxGram], options),
   edgeNgram: (minGram: number, maxGram: number, options?: TokenizerOptions) =>
-    tokenizer("edge_ngram", [minGram, maxGram], options),
+    makeTokenizer("edge_ngram", [minGram, maxGram], options),
 };
 
 function renderArg(value: TokenizerArg): string {
