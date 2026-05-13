@@ -199,6 +199,102 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs snippet", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        snippet: search.snippet(mockItems.description),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes"))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", pdb.snippet("description") from "mock_items" where "mock_items"."description" ||| $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["shoes", 5]);
+
+    await query;
+  });
+  it("runs snippet with options", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        snippet: search.snippet(mockItems.description, {
+          startTag: "<i>",
+          endTag: "</i>",
+          maxNumChars: 15,
+        }),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes"))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", pdb.snippet("description", start_tag => $1, end_tag => $2, max_num_chars => $3) from "mock_items" where "mock_items"."description" ||| $4 limit $5`,
+    );
+    expect(generated.params).toStrictEqual(["<i>", "</i>", 15, "shoes", 5]);
+
+    await query;
+  });
+  it("runs snippets", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        snippets: search.snippets(mockItems.description, {
+          startTag: "<b>",
+          endTag: "</b>",
+          maxNumChars: 15,
+          limit: 1,
+          offset: 1,
+          sortBy: "position",
+        }),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "running"))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", pdb.snippets("description", start_tag => $1, end_tag => $2, max_num_chars => $3, "limit" => $4, "offset" => $5, sort_by => $6) from "mock_items" where "mock_items"."description" ||| $7 limit $8`,
+    );
+    expect(generated.params).toStrictEqual([
+      '<b>',
+      '</b>',
+      15,
+      1,
+      1,
+      "position",
+      "running",
+      5,
+    ]);
+
+    await query;
+  });
+  it("runs snippet positions", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        snippetPositions: search.snippetPositions(mockItems.description),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes"))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", pdb.snippet_positions("description") from "mock_items" where "mock_items"."description" ||| $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["shoes", 5]);
+
+    await query;
+  });
   it("runs basic phrase", async () => {
     const query = db
       .select({

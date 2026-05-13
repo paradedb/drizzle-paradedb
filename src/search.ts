@@ -2,6 +2,16 @@ import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
 type SearchValue = string | string[] | SQLWrapper;
+type SnippetOptions = {
+  startTag?: string;
+  endTag?: string;
+  maxNumChars?: number;
+};
+type SnippetsOptions = SnippetOptions & {
+  limit?: number;
+  offset?: number;
+  sortBy?: "score" | "position";
+};
 
 export function boost(value: SearchValue, factor: number): SQL {
   return sql`${renderSearchValue(value)}::pdb.boost(${sql.raw(String(factor))})`;
@@ -37,6 +47,24 @@ export function score(key: SQLWrapper): SQL<number> {
   return sql<number>`pdb.score(${key})`;
 }
 
+export function snippet(
+  column: SQLWrapper,
+  options?: SnippetOptions,
+): SQL<string> {
+  return sql<string>`pdb.snippet(${column}${renderSnippetOptions(options)})`;
+}
+
+export function snippets(
+  column: SQLWrapper,
+  options?: SnippetsOptions,
+): SQL<string[]> {
+  return sql<string[]>`pdb.snippets(${column}${renderSnippetOptions(options)})`;
+}
+
+export function snippetPositions(column: SQLWrapper): SQL<[number, number][]> {
+  return sql<[number, number][]>`pdb.snippet_positions(${column})`;
+}
+
 export function matchAll(column: SQLWrapper, value: SearchValue): SQL {
   return sql`${column} &&& ${renderSearchValue(value)}`;
 }
@@ -57,4 +85,22 @@ function renderSearchValue(value: SearchValue): SQL {
   return Array.isArray(value)
     ? sql`ARRAY[${sql.join(value, sql`, `)}]`
     : sql`${value}`;
+}
+
+function renderSnippetOptions(options: SnippetsOptions = {}): SQL {
+  const args: SQL[] = [];
+
+  if (options.startTag !== undefined)
+    args.push(sql`start_tag => ${options.startTag}`);
+  if (options.endTag !== undefined)
+    args.push(sql`end_tag => ${options.endTag}`);
+  if (options.maxNumChars !== undefined)
+    args.push(sql`max_num_chars => ${options.maxNumChars}`);
+  if (options.limit !== undefined) args.push(sql`"limit" => ${options.limit}`);
+  if (options.offset !== undefined)
+    args.push(sql`"offset" => ${options.offset}`);
+  if (options.sortBy !== undefined)
+    args.push(sql`sort_by => ${options.sortBy}`);
+
+  return args.length ? sql`, ${sql.join(args, sql`, `)}` : sql``;
 }
