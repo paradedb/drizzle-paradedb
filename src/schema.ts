@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { bm25Field, bm25Index } from "./indexing.js";
-import { tokenizer } from "./tokenizer.js";
+import * as tokenizer from "./tokenizer.js";
 
 const int4range = customType<{ data: string; driverData: string }>({
   dataType() {

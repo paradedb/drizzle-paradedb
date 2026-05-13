@@ -74,9 +74,10 @@ describe("ParadeDB query language", () => {
       })
       .from(mockItems)
       .where(
-        search.matchAll(mockItems.description, "running shoes", {
-          relevance: { kind: "boost", value: 1.5 },
-        }),
+        search.matchAll(
+          mockItems.description,
+          search.boost("running shoes", 1.5),
+        ),
       );
 
     const generated = query.toSQL();
@@ -96,9 +97,10 @@ describe("ParadeDB query language", () => {
       })
       .from(mockItems)
       .where(
-        search.matchAll(mockItems.description, "running shoes", {
-          relevance: { kind: "const", value: 1.5 },
-        }),
+        search.matchAll(
+          mockItems.description,
+          search.constant("running shoes", 1.5),
+        ),
       );
 
     const generated = query.toSQL();
@@ -118,9 +120,10 @@ describe("ParadeDB query language", () => {
       })
       .from(mockItems)
       .where(
-        search.matchAll(mockItems.description, "running shoes", {
-          tokenizer: tokenizer.simple(),
-        }),
+        search.matchAll(
+          mockItems.description,
+          search.tokenize("running shoes", tokenizer.simple()),
+        ),
       );
 
     const generated = query.toSQL();
@@ -140,10 +143,13 @@ describe("ParadeDB query language", () => {
       })
       .from(mockItems)
       .where(
-        search.matchAll(mockItems.description, "running shoes", {
-          tokenizer: tokenizer.simple(),
-          relevance: { kind: "const", value: 1.5 },
-        }),
+        search.matchAll(
+          mockItems.description,
+          search.constant(
+            search.tokenize("running shoes", tokenizer.simple()),
+            1.5,
+          ),
+        ),
       );
 
     const generated = query.toSQL();
@@ -152,6 +158,26 @@ describe("ParadeDB query language", () => {
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple::pdb.const(1.5)`,
     );
     expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs matchAll with fuzzy", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.matchAll(mockItems.description, search.fuzzy("shose", 1, true)),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1, t)`,
+    );
+    expect(generated.params).toStrictEqual(["shose"]);
 
     await query;
   });
