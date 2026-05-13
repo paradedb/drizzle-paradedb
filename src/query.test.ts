@@ -264,8 +264,8 @@ describe("ParadeDB query language", () => {
       `select "id", pdb.snippets("description", start_tag => $1, end_tag => $2, max_num_chars => $3, "limit" => $4, "offset" => $5, sort_by => $6) from "mock_items" where "mock_items"."description" ||| $7 limit $8`,
     );
     expect(generated.params).toStrictEqual([
-      '<b>',
-      '</b>',
+      "<b>",
+      "</b>",
       15,
       1,
       1,
@@ -353,6 +353,158 @@ describe("ParadeDB query language", () => {
       `select "id", "description" from "mock_items" where "mock_items"."description" ### $1::pdb.simple::pdb.slop(2)`,
     );
     expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs basic proximity", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search.proxStr("sleek").within(1, "shoes"),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ## $2::int4) ## $3)`,
+    );
+    expect(generated.params).toStrictEqual(["sleek", 1, "shoes"]);
+
+    await query;
+  });
+  it("runs ordered proximity", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search.proxStr("sleek").within(1, "shoes", true),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ##> $2::int4) ##> $3)`,
+    );
+    expect(generated.params).toStrictEqual(["sleek", 1, "shoes"]);
+
+    await query;
+  });
+  it("runs proximity with regex", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search.proxRegex("sl.*", 100).within(1, "shoes"),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ ((pdb.prox_regex($1, $2::int4) ## $3::int4) ## $4)`,
+    );
+    expect(generated.params).toStrictEqual(["sl.*", 100, 1, "shoes"]);
+
+    await query;
+  });
+  it("runs proximity with array", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search
+            .proxArray(search.proxRegex("sl.*"), "white")
+            .within(1, "shoes"),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ ((pdb.prox_array(pdb.prox_regex($1), $2) ## $3::int4) ## $4)`,
+    );
+    expect(generated.params).toStrictEqual(["sl.*", "white", 1, "shoes"]);
+
+    await query;
+  });
+  it("runs chained proximity", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search
+            .proxStr("sleek")
+            .within(1, "running")
+            .within(2, search.proxArray("sneakers", search.proxRegex("sho.*"))),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (((($1 ## $2::int4) ## $3) ## $4::int4) ## pdb.prox_array($5, pdb.prox_regex($6)))`,
+    );
+    expect(generated.params).toStrictEqual([
+      "sleek",
+      1,
+      "running",
+      2,
+      "sneakers",
+      "sho.*",
+    ]);
+
+    await query;
+  });
+  it("runs right associative proximity", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.proximity(
+          mockItems.description,
+          search
+            .proxStr("sleek")
+            .within(1, search.proxStr("running").within(1, "shoes")),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ## $2::int4) ## (($3 ## $4::int4) ## $5))`,
+    );
+    expect(generated.params).toStrictEqual(["sleek", 1, "running", 1, "shoes"]);
 
     await query;
   });

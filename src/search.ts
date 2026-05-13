@@ -2,6 +2,7 @@ import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
 type SearchValue = string | string[] | SQLWrapper;
+type ProximityValue = string | ProximityExpr;
 type SnippetOptions = {
   startTag?: string;
   endTag?: string;
@@ -79,6 +80,55 @@ export function phrase(column: SQLWrapper, value: SearchValue): SQL<boolean> {
 
 export function term(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} === ${renderSearchValue(value)}`;
+}
+
+export class ProximityExpr implements SQLWrapper {
+  constructor(private expr: SQL) {}
+
+  getSQL(): SQL {
+    return this.expr;
+  }
+
+  shouldOmitSQLParens(): boolean {
+    return true;
+  }
+
+  within(
+    distance: number,
+    other: ProximityValue,
+    ordered = false,
+  ): ProximityExpr {
+    const op = sql.raw(ordered ? "##>" : "##");
+    return new ProximityExpr(
+      sql`((${this.expr} ${op} ${distance}::int4) ${op} ${other})`,
+    );
+  }
+}
+
+export function proxStr(value: string): ProximityExpr {
+  return new ProximityExpr(sql`${value}`);
+}
+
+export function proxRegex(
+  pattern: string,
+  maxExpansions?: number,
+): ProximityExpr {
+  return new ProximityExpr(
+    maxExpansions === undefined
+      ? sql`pdb.prox_regex(${pattern})`
+      : sql`pdb.prox_regex(${pattern}, ${maxExpansions}::int4)`,
+  );
+}
+
+export function proxArray(...values: ProximityValue[]): ProximityExpr {
+  return new ProximityExpr(sql`pdb.prox_array(${sql.join(values, sql`, `)})`);
+}
+
+export function proximity(
+  column: SQLWrapper,
+  value: ProximityValue,
+): SQL<boolean> {
+  return sql<boolean>`${column} @@@ ${value}`;
 }
 
 function renderSearchValue(value: SearchValue): SQL {
