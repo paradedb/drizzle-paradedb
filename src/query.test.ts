@@ -2,7 +2,7 @@ import { desc, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { client, db } from "./db.js";
-import { matchAll, score } from "./search.js";
+import { search } from "./index.js";
 import { mockItems } from "./schema.js";
 
 beforeAll(async () => {
@@ -38,8 +38,8 @@ describe("ParadeDB query language", () => {
         category: mockItems.category,
       })
       .from(mockItems)
-      .where(matchAll(mockItems.description, "running shoes"))
-      .orderBy(desc(score(mockItems.id)))
+      .where(search.matchAll(mockItems.description, "running shoes"))
+      .orderBy(desc(search.score(mockItems.id)))
       .limit(5);
 
     const generated = query.toSQL();
