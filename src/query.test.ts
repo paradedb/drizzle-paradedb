@@ -181,4 +181,22 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs basic matchAny", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shose"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" ||| $1`,
+    );
+    expect(generated.params).toStrictEqual(["shose"]);
+
+    await query;
+  });
 });

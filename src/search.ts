@@ -37,6 +37,10 @@ export function matchAll(column: SQLWrapper, value: SearchValue): SQL {
   return sql`${column} &&& ${renderSearchValue(value)}`;
 }
 
+export function matchAny(column: SQLWrapper, value: SearchValue): SQL {
+  return sql`${column} ||| ${renderSearchValue(value)}`;
+}
+
 function renderSearchValue(value: SearchValue): SQL {
   return Array.isArray(value)
     ? sql`ARRAY[${sql.join(value, sql`, `)}]`
