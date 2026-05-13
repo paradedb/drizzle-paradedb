@@ -11,6 +11,10 @@ export function constant(value: SearchValue, score: number): SQL {
   return sql`${renderSearchValue(value)}::pdb.const(${sql.raw(String(score))})`;
 }
 
+export function slop(value: SearchValue, n: number): SQL {
+  return sql`${renderSearchValue(value)}::pdb.slop(${sql.raw(String(n))})`;
+}
+
 export function fuzzy(
   value: SearchValue,
   distance: number,
@@ -39,6 +43,10 @@ export function matchAll(column: SQLWrapper, value: SearchValue): SQL {
 
 export function matchAny(column: SQLWrapper, value: SearchValue): SQL {
   return sql`${column} ||| ${renderSearchValue(value)}`;
+}
+
+export function phrase(column: SQLWrapper, value: SearchValue): SQL {
+  return sql`${column} ### ${renderSearchValue(value)}`;
 }
 
 function renderSearchValue(value: SearchValue): SQL {

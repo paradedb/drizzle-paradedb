@@ -199,4 +199,65 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs basic phrase", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.phrase(mockItems.description, "running shoes"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" ### $1`,
+    );
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs phrase with slop", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.phrase(mockItems.description, search.slop("running shoes", 2)),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" ### $1::pdb.slop(2)`,
+    );
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs phrase with slop and tokenizer", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.phrase(
+          mockItems.description,
+          search.slop(search.tokenize("running shoes", tokenizer.simple()), 2),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" ### $1::pdb.simple::pdb.slop(2)`,
+    );
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
 });
