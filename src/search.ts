@@ -65,20 +65,20 @@ export function snippetPositions(column: SQLWrapper): SQL<[number, number][]> {
   return sql<[number, number][]>`pdb.snippet_positions(${column})`;
 }
 
-export function matchAll(column: SQLWrapper, value: SearchValue): SQL {
-  return sql`${column} &&& ${renderSearchValue(value)}`;
+export function matchAll(column: SQLWrapper, value: SearchValue): SQL<boolean> {
+  return sql<boolean>`${column} &&& ${renderSearchValue(value)}`;
 }
 
-export function matchAny(column: SQLWrapper, value: SearchValue): SQL {
-  return sql`${column} ||| ${renderSearchValue(value)}`;
+export function matchAny(column: SQLWrapper, value: SearchValue): SQL<boolean> {
+  return sql<boolean>`${column} ||| ${renderSearchValue(value)}`;
 }
 
-export function phrase(column: SQLWrapper, value: SearchValue): SQL {
-  return sql`${column} ### ${renderSearchValue(value)}`;
+export function phrase(column: SQLWrapper, value: SearchValue): SQL<boolean> {
+  return sql<boolean>`${column} ### ${renderSearchValue(value)}`;
 }
 
-export function term(column: SQLWrapper, value: SearchValue): SQL {
-  return sql`${column} === ${renderSearchValue(value)}`;
+export function term(column: SQLWrapper, value: SearchValue): SQL<boolean> {
+  return sql<boolean>`${column} === ${renderSearchValue(value)}`;
 }
 
 function renderSearchValue(value: SearchValue): SQL {
