@@ -3,7 +3,8 @@ import { getTableConfig, integer, jsonb, pgTable, PgDialect, text } from "drizzl
 import { describe, expect, it } from "vitest";
 
 import { bm25Field, bm25Index, jsonText, pdbAlias} from "./indexing.js";
-import {tokenizer } from "./tokenizer.js"
+import { tokenizer } from "./index.js";
+
 
 const products = pgTable("products", {
   id: integer("id").primaryKey(),

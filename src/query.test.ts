@@ -2,10 +2,8 @@ import { desc, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { client, db } from "./db.js";
-import { search } from "./index.js";
+import { search, tokenizer } from "./index.js";
 import { mockItems } from "./schema.js";
-// TODO make a `tokenizer` namespace instead?
-import { tokenizer } from "./tokenizer.js";
 
 beforeAll(async () => {
   await db.execute(sql`
