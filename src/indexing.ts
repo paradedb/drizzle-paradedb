@@ -1,4 +1,4 @@
-import { AnyColumn, sql, SQL, SQLWrapper } from "drizzle-orm";
+import { sql, SQL, SQLWrapper } from "drizzle-orm";
 import { index, IndexBuilder, PgColumn } from "drizzle-orm/pg-core";
 import { renderTokenizer, Tokenizer } from "./tokenizer.js";
 
@@ -16,15 +16,15 @@ export function bm25Index(name?: string): {
   };
 }
 
-export function bm25Field(field: SQLWrapper | AnyColumn, tokenizer: Tokenizer): SQL {
+export function bm25Field(field: SQLWrapper, tokenizer: Tokenizer): SQL {
   return sql`((${field})::${sql.raw(renderTokenizer(tokenizer))})`;
 }
 
-export function pdbAlias(field: SQLWrapper | AnyColumn, alias: string): SQL {
+export function pdbAlias(field: SQLWrapper, alias: string): SQL {
   return sql`((${field})::pdb.alias(${sql.raw(quote(alias))}))`;
 }
 
-export function jsonText(column: SQLWrapper | AnyColumn, key: string): SQL {
+export function jsonText(column: SQLWrapper, key: string): SQL {
   return sql`${column} ->> ${sql.raw(quote(key))}`;
 }
 

@@ -1,4 +1,4 @@
-import { sql, type AnyColumn, type SQL, type SQLWrapper } from "drizzle-orm";
+import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import type { TypedQueryBuilder } from "drizzle-orm/query-builders/query-builder";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
@@ -8,11 +8,11 @@ export function boost(value: SearchValue, factor: number): SQL {
   return sql`${value}::pdb.boost(${sql.raw(String(factor))})`;
 }
 
-export function score(key: SQLWrapper | AnyColumn): SQL<number> {
+export function score(key: SQLWrapper): SQL<number> {
   return sql<number>`pdb.score(${key})`;
 }
 
-export function matchAll(column: SQLWrapper | AnyColumn, value: SearchValue, tokenizer?: Tokenizer): SQL {
+export function matchAll(column: SQLWrapper, value: SearchValue, tokenizer?: Tokenizer): SQL {
   return sql`${column} &&& ${tokenizer ? tokenize(value, tokenizer) : value}`;
 }
 
