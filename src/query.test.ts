@@ -260,4 +260,40 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs basic term", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.term(mockItems.description, "running shoes"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" === $1`,
+    );
+    expect(generated.params).toStrictEqual(["running shoes"]);
+
+    await query;
+  });
+  it("runs term with array", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.term(mockItems.description, ["running", "shoes"]));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" === ARRAY[$1, $2]`,
+    );
+    expect(generated.params).toStrictEqual(["running", "shoes"]);
+
+    await query;
+  });
 });

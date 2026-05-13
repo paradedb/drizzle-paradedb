@@ -49,6 +49,10 @@ export function phrase(column: SQLWrapper, value: SearchValue): SQL {
   return sql`${column} ### ${renderSearchValue(value)}`;
 }
 
+export function term(column: SQLWrapper, value: SearchValue): SQL {
+  return sql`${column} === ${renderSearchValue(value)}`;
+}
+
 function renderSearchValue(value: SearchValue): SQL {
   return Array.isArray(value)
     ? sql`ARRAY[${sql.join(value, sql`, `)}]`
