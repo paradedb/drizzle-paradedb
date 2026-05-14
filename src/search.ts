@@ -131,6 +131,10 @@ export function proximity(
   return sql<boolean>`${column} @@@ ${value}`;
 }
 
+export function all(column: SQLWrapper): SQL<boolean> {
+  return sql<boolean>`${column} @@@ pdb.all()`;
+}
+
 function renderSearchValue(value: SearchValue): SQL {
   return Array.isArray(value)
     ? sql`ARRAY[${sql.join(value, sql`, `)}]`

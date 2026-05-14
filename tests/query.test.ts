@@ -544,6 +544,24 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs query with pdb.all()", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.all(mockItems.description));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.all()`,
+    );
+    expect(generated.params).toStrictEqual([]);
+
+    await query;
+  });
   it.each([
     [
       tokenizer.unicodeWords({ remove_emojis: true }),
