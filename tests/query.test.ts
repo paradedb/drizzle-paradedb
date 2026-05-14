@@ -188,7 +188,7 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", "description" from "mock_items" where ("mock_items"."description")::pdb.alias('description_simple') ||| $1`,
+      `select "id", "description" from "mock_items" where (("mock_items"."description")::pdb.alias('description_simple')) ||| $1`,
     );
     expect(generated.params).toStrictEqual(["running shoes"]);
   });

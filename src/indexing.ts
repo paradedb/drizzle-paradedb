@@ -20,10 +20,6 @@ export function bm25Field(field: SQLWrapper, tokenizer: Tokenizer): SQL {
   return sql`((${field})::${sql.raw(renderTokenizer(tokenizer))})`;
 }
 
-export function pdbAlias(field: SQLWrapper, alias: string): SQL {
-  return sql`((${field})::pdb.alias(${sql.raw(quote(alias))}))`;
-}
-
 export function jsonText(column: SQLWrapper, key: string): SQL {
   return sql`${column} ->> ${sql.raw(quote(key))}`;
 }

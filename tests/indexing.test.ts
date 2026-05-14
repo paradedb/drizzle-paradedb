@@ -1,19 +1,16 @@
-import { sql, type SQL } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import {
-  getTableConfig,
-  integer,
-  jsonb,
-  pgTable,
-  PgDialect,
-  text,
-} from "drizzle-orm/pg-core";
-import { describe, expect, it } from "vitest";
+  generateDrizzleJson,
+  generateMigration,
+} from "drizzle-kit/api-postgres";
+import { afterAll, describe, expect, it } from "vitest";
 
-import { bm25Field, bm25Index, jsonText, pdbAlias } from "../src/indexing.js";
-import { tokenizer } from "../src/index.js";
+import { tokenizer, search, indexing } from "../src/index.js";
+import { client, db } from "./db.js";
 
 const products = pgTable(
-  "products",
+  "indexing_test_products",
   {
     id: integer("id").primaryKey(),
     description: text("description"),
@@ -21,59 +18,46 @@ const products = pgTable(
     rating: integer("rating"),
   },
   (table) => [
-    bm25Index("products_bm25_idx")
+    indexing
+      .bm25Index("indexing_test_products_bm25_idx")
       .on(
         table.id,
-        bm25Field(
+        indexing.bm25Field(
           table.description,
           tokenizer.ngram(3, 3, { positions: true }),
         ),
-        bm25Field(
-          jsonText(table.metadata, "color"),
+        indexing.bm25Field(
+          indexing.jsonText(table.metadata, "color"),
           tokenizer.literal({ alias: "metadata_color" }),
         ),
-        pdbAlias(sql`${table.rating} + 1`, "next_rating"),
+        search.alias(sql`${table.rating} + 1`, "next_rating"),
       )
       .where(sql`${table.rating} > 0`),
   ],
 );
 
-const dialect = new PgDialect();
-
-describe("ParadeDB indexing helpers", () => {
-  it("build normal Drizzle bm25 indexes", () => {
-    const [idx] = getTableConfig(products).indexes;
-
-    expect(idx.config.name).toBe("products_bm25_idx");
-    expect(idx.config.method).toBe("bm25");
-    expect(idx.config.with).toEqual({ key_field: "id" });
-    expect(idx.config.where).toBeDefined();
-    expect(idx.config.columns).toHaveLength(4);
-  });
-
-  it("renders tokenizer casts for index expressions", () => {
-    expect(
-      render(
-        bm25Field(
-          products.description,
-          tokenizer.ngram(3, 3, { positions: true }),
-        ),
-      ),
-    ).toBe("((\"description\")::pdb.ngram(3,3,'positions=true'))");
-    expect(
-      render(
-        bm25Field(
-          jsonText(products.metadata, "color"),
-          tokenizer.literal({ alias: "metadata_color" }),
-        ),
-      ),
-    ).toBe("((\"metadata\" ->> 'color')::pdb.literal('alias=metadata_color'))");
-    expect(render(pdbAlias(sql`${products.rating} + 1`, "next_rating"))).toBe(
-      "((\"rating\" + 1)::pdb.alias('next_rating'))",
-    );
-  });
+afterAll(async () => {
+  await client.end();
 });
 
-function render(value: SQL): string {
-  return dialect.sqlToQuery(value, "indexes").sql;
-}
+describe("ParadeDB indexing helpers", () => {
+  it("generates and runs bm25 index SQL", async () => {
+    const prev = await generateDrizzleJson({});
+    const cur = await generateDrizzleJson({ products });
+    const statements = await generateMigration(prev, cur);
+
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id",(("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WITH (key_field=id) WHERE "rating" > 0;`,
+    );
+
+    await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
+
+    try {
+      for (const statement of statements) {
+        await db.execute(sql.raw(statement));
+      }
+    } finally {
+      await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
+    }
+  });
+});

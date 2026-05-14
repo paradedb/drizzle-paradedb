@@ -34,7 +34,7 @@ export function tokenize(value: SearchValue, tokenizer: Tokenizer): SQL {
 }
 
 export function alias(column: SQLWrapper, alias: string): SQL {
-  return sql`(${column})::pdb.alias(${sql.raw(quote(alias))})`;
+  return sql`((${column})::pdb.alias(${sql.raw(quote(alias))}))`;
 }
 
 export function score(key: SQLWrapper): SQL<number> {
@@ -318,12 +318,14 @@ export class Agg extends SQL {
 
 export function agg(agg: Record<string, unknown>, exact?: boolean): Agg {
   const payload = JSON.stringify(agg);
-  const expr = exact === undefined
-    ? sql`pdb.agg(${payload})`
-    : sql`pdb.agg(${payload}, ${exact})`;
-  const windowExpr = exact === undefined
-    ? sql`pdb.agg(${sql.raw(quote(payload))}) OVER ()`
-    : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))}) OVER ()`;
+  const expr =
+    exact === undefined
+      ? sql`pdb.agg(${payload})`
+      : sql`pdb.agg(${payload}, ${exact})`;
+  const windowExpr =
+    exact === undefined
+      ? sql`pdb.agg(${sql.raw(quote(payload))}) OVER ()`
+      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))}) OVER ()`;
 
   return new Agg(expr, windowExpr);
 }
