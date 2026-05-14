@@ -299,8 +299,10 @@ function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
   return args;
 }
 
-export function agg(agg: Record<string, unknown>): SQL {
-  return sql`pdb.agg(${JSON.stringify(agg)})`;
+export function agg(agg: Record<string, unknown>, exact?: boolean): SQL {
+  return exact === undefined
+    ? sql`pdb.agg(${JSON.stringify(agg)})`
+    : sql`pdb.agg(${JSON.stringify(agg)}, ${exact})`;
 }
 
 function columnCastType(column: AnyColumn): string {

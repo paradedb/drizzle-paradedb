@@ -723,6 +723,27 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs approximate agg", async () => {
+    const query = db
+      .select({
+        agg: search.agg({ value_count: { field: "id" } }, false),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "running shoes"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select pdb.agg($1, $2) from "mock_items" where "mock_items"."description" ||| $3`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"value_count":{"field":"id"}}`,
+      false,
+      "running shoes",
+    ]);
+
+    await query;
+  });
   it("runs multiple aggs", async () => {
     const query = db
       .select({
