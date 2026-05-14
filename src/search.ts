@@ -1,4 +1,4 @@
-import { AnyColumn, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
 type SearchValue = string | string[] | SQLWrapper;
@@ -299,10 +299,33 @@ function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
   return args;
 }
 
-export function agg(agg: Record<string, unknown>, exact?: boolean): SQL {
-  return exact === undefined
-    ? sql`pdb.agg(${JSON.stringify(agg)})`
-    : sql`pdb.agg(${JSON.stringify(agg)}, ${exact})`;
+export class Agg extends SQL {
+  constructor(
+    expr: SQL,
+    private windowExpr: SQL,
+  ) {
+    super(expr.queryChunks);
+  }
+
+  over(): SQL {
+    return this.windowExpr;
+  }
+}
+
+export function agg(agg: Record<string, unknown>, exact?: boolean): Agg {
+  const payload = JSON.stringify(agg);
+  const expr = exact === undefined
+    ? sql`pdb.agg(${payload})`
+    : sql`pdb.agg(${payload}, ${exact})`;
+  const windowExpr = exact === undefined
+    ? sql`pdb.agg(${sql.raw(quote(payload))}) OVER ()`
+    : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))}) OVER ()`;
+
+  return new Agg(expr, windowExpr);
+}
+
+function quote(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function columnCastType(column: AnyColumn): string {

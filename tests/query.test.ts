@@ -1,4 +1,4 @@
-import { desc, sql } from "drizzle-orm";
+import { and, desc, sql } from "drizzle-orm";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -763,6 +763,33 @@ describe("ParadeDB query language", () => {
       `{"value_count":{"field":"id"}}`,
       "electronics",
     ]);
+
+    await query;
+  });
+  it("runs value_count agg as a window function", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+        rating: mockItems.rating,
+        agg: search.agg({ value_count: { field: "id" } }).over(),
+      })
+      .from(mockItems)
+      .where(
+        and(
+          search.all(mockItems.id),
+          search.term(mockItems.category, "electronics"),
+        ),
+      )
+      .orderBy(desc(mockItems.rating))
+      .limit(3);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description", "rating", pdb.agg('{"value_count":{"field":"id"}}') OVER () from "mock_items" where (("mock_items"."id" @@@ pdb.all()) and ("mock_items"."category" === $1)) order by "mock_items"."rating" desc limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["electronics", 3]);
 
     await query;
   });
