@@ -307,8 +307,18 @@ export class Agg extends SQL {
   constructor(
     expr: SQL,
     private windowExpr: SQL,
+    private windowBaseExpr: SQL = expr,
   ) {
     super(expr.queryChunks);
+  }
+
+  filter(where: SQLWrapper): Agg {
+    const expr = sql`${this} FILTER (WHERE ${where})`;
+    return new Agg(
+      expr,
+      sql`${this.windowBaseExpr} FILTER (WHERE ${where}) OVER ()`,
+      expr,
+    );
   }
 
   over(): SQL {
@@ -322,12 +332,12 @@ export function agg(agg: Record<string, unknown>, exact?: boolean): Agg {
     exact === undefined
       ? sql`pdb.agg(${payload})`
       : sql`pdb.agg(${payload}, ${exact})`;
-  const windowExpr =
+  const windowBaseExpr =
     exact === undefined
-      ? sql`pdb.agg(${sql.raw(quote(payload))}) OVER ()`
-      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))}) OVER ()`;
+      ? sql`pdb.agg(${sql.raw(quote(payload))})`
+      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))})`;
 
-  return new Agg(expr, windowExpr);
+  return new Agg(expr, sql`${windowBaseExpr} OVER ()`, windowBaseExpr);
 }
 
 function quote(value: string): string {

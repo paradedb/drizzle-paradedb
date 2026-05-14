@@ -12,7 +12,10 @@ type Bm25IndexOptions = {
   searchTokenizer?: Tokenizer;
 };
 
-export function bm25Index(name?: string, options: Bm25IndexOptions = {}): {
+export function bm25Index(
+  name?: string,
+  options: Bm25IndexOptions = {},
+): {
   on(keyField: PgColumn, ...fields: IndexField[]): IndexBuilder;
 } {
   return {

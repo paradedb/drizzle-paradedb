@@ -805,6 +805,32 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs filtered aggs", async () => {
+    const query = db
+      .select({
+        electronicsCount: search
+          .agg({ value_count: { field: "id" } })
+          .filter(search.term(mockItems.category, "electronics")),
+        footwearCount: search
+          .agg({ value_count: { field: "id" } })
+          .filter(search.term(mockItems.category, "footwear")),
+      })
+      .from(mockItems);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select pdb.agg($1) FILTER (WHERE "mock_items"."category" === $2), pdb.agg($3) FILTER (WHERE "mock_items"."category" === $4) from "mock_items"`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"value_count":{"field":"id"}}`,
+      "electronics",
+      `{"value_count":{"field":"id"}}`,
+      "footwear",
+    ]);
+
+    await query;
+  });
   it("runs value_count agg as a window function", async () => {
     const query = db
       .select({

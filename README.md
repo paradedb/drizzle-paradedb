@@ -69,4 +69,3 @@ If you need commercial support, please [contact the ParadeDB team](mailto:sales@
 ## License
 
 ParadeDB for Drizzle is licensed under the [MIT License](LICENSE).
-
