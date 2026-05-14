@@ -703,6 +703,72 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs value_count agg", async () => {
+    const query = db
+      .select({
+        agg: search.agg({ value_count: { field: "id" } }),
+      })
+      .from(mockItems)
+      .where(search.term(mockItems.category, "electronics"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select pdb.agg($1) from "mock_items" where "mock_items"."category" === $2`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"value_count":{"field":"id"}}`,
+      "electronics",
+    ]);
+
+    await query;
+  });
+  it("runs multiple aggs", async () => {
+    const query = db
+      .select({
+        avgRating: search.agg({ avg: { field: "rating" } }),
+        count: search.agg({ value_count: { field: "id" } }),
+      })
+      .from(mockItems)
+      .where(search.term(mockItems.category, "electronics"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select pdb.agg($1), pdb.agg($2) from "mock_items" where "mock_items"."category" === $3`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"avg":{"field":"rating"}}`,
+      `{"value_count":{"field":"id"}}`,
+      "electronics",
+    ]);
+
+    await query;
+  });
+  it("runs range agg", async () => {
+    const query = db
+      .select({
+        agg: search.agg({
+          range: {
+            field: "rating",
+            ranges: [{ to: 3.0 }, { from: 3.0, to: 6.0 }],
+          },
+        }),
+      })
+      .from(mockItems)
+      .where(search.all(mockItems.id));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select pdb.agg($1) from "mock_items" where "mock_items"."id" @@@ pdb.all()`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"range":{"field":"rating","ranges":[{"to":3},{"from":3,"to":6}]}}`,
+    ]);
+
+    await query;
+  });
   it("runs parse", async () => {
     const query = db
       .select({

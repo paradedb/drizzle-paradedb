@@ -299,6 +299,10 @@ function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
   return args;
 }
 
+export function agg(agg: Record<string, unknown>): SQL {
+  return sql`pdb.agg(${JSON.stringify(agg)})`;
+}
+
 function columnCastType(column: AnyColumn): string {
   const sqlType = column.getSQLType();
   if (sqlType === "serial") return "integer";
