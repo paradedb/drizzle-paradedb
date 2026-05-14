@@ -171,6 +171,27 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("renders matchAny against an aliased field", () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.matchAny(
+          search.alias(mockItems.description, "description_simple"),
+          "running shoes",
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where ("mock_items"."description")::pdb.alias('description_simple') ||| $1`,
+    );
+    expect(generated.params).toStrictEqual(["running shoes"]);
+  });
   it("runs matchAll with fuzzy", async () => {
     const query = db
       .select({

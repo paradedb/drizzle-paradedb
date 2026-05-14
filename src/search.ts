@@ -33,6 +33,10 @@ export function tokenize(value: SearchValue, tokenizer: Tokenizer): SQL {
   return sql`${renderSearchValue(value)}::${sql.raw(renderTokenizer(tokenizer))}`;
 }
 
+export function alias(column: SQLWrapper, alias: string): SQL {
+  return sql`(${column})::pdb.alias(${sql.raw(quote(alias))})`;
+}
+
 export function score(key: SQLWrapper): SQL<number> {
   return sql<number>`pdb.score(${key})`;
 }
