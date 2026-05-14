@@ -13,6 +13,10 @@ export type SnippetsOptions = SnippetOptions & {
   offset?: number;
   sortBy?: "score" | "position";
 };
+export type ParseOptions = {
+  lenient?: boolean;
+  conjunctionMode?: boolean;
+};
 
 export function boost(value: SearchValue, factor: number): SQL {
   return sql`${renderSearchValue(value)}::pdb.boost(${sql.raw(String(factor))})`;
@@ -161,6 +165,21 @@ export function proximity(
 
 export function all(column: SQLWrapper): SQL<boolean> {
   return sql<boolean>`${column} @@@ pdb.all()`;
+}
+
+export function parse(
+  column: SQLWrapper,
+  query: string,
+  options: ParseOptions = {},
+): SQL<boolean> {
+  const args = [sql`${query}`];
+
+  if (options.lenient !== undefined)
+    args.push(sql`lenient => ${options.lenient}`);
+  if (options.conjunctionMode !== undefined)
+    args.push(sql`conjunction_mode => ${options.conjunctionMode}`);
+
+  return sql<boolean>`${column} @@@ pdb.parse(${sql.join(args, sql`, `)})`;
 }
 
 export type MoreLikeThisDocumentOptions = {
