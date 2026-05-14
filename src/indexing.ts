@@ -1,17 +1,32 @@
 import { sql, SQL, SQLWrapper } from "drizzle-orm";
 import { index, IndexBuilder, PgColumn } from "drizzle-orm/pg-core";
-import { renderTokenizer, Tokenizer } from "./tokenizer.js";
+import {
+  renderSearchTokenizer,
+  renderTokenizer,
+  Tokenizer,
+} from "./tokenizer.js";
 
 type IndexField = PgColumn | SQL;
 
-export function bm25Index(name?: string): {
+type Bm25IndexOptions = {
+  searchTokenizer?: Tokenizer;
+};
+
+export function bm25Index(name?: string, options: Bm25IndexOptions = {}): {
   on(keyField: PgColumn, ...fields: IndexField[]): IndexBuilder;
 } {
   return {
     on(keyField, ...fields) {
+      const withOptions: Record<string, string> = { key_field: keyField.name };
+      if (options.searchTokenizer) {
+        withOptions.search_tokenizer = quote(
+          renderSearchTokenizer(options.searchTokenizer),
+        );
+      }
+
       return index(name)
         .using("bm25", keyField, ...fields)
-        .with({ key_field: keyField.name });
+        .with(withOptions);
     },
   };
 }

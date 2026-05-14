@@ -110,3 +110,20 @@ export function renderTokenizer({
 
   return `pdb.${name}(${renderedArgs.join(",")})`;
 }
+
+export function renderSearchTokenizer({
+  name,
+  args = [],
+  options,
+}: Tokenizer): string {
+  const renderedArgs = args.map(renderOptionValue);
+  for (const [key, value] of Object.entries(options ?? {})) {
+    renderedArgs.push(`${key}=${renderOptionValue(value)}`);
+  }
+
+  if (renderedArgs.length === 0) {
+    return name;
+  }
+
+  return `${name}(${renderedArgs.join(",")})`;
+}
