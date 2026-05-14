@@ -402,6 +402,47 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs regex phrase", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.regexPhrase(mockItems.description, ["ru.*", "shoes"]));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex_phrase(ARRAY[$1, $2])`,
+    );
+    expect(generated.params).toStrictEqual(["ru.*", "shoes"]);
+
+    await query;
+  });
+  it("runs regex phrase with options", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.regexPhrase(mockItems.description, ["ru.*", "shoes"], {
+          slop: 1,
+          maxExpansions: 100,
+        }),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex_phrase(ARRAY[$1, $2], slop => $3, max_expansions => $4)`,
+    );
+    expect(generated.params).toStrictEqual(["ru.*", "shoes", 1, 100]);
+
+    await query;
+  });
   it("runs basic proximity", async () => {
     const query = db
       .select({
@@ -587,6 +628,24 @@ describe("ParadeDB query language", () => {
       `select "id", "description" from "mock_items" where "mock_items"."description" === ARRAY[$1, $2]`,
     );
     expect(generated.params).toStrictEqual(["running", "shoes"]);
+
+    await query;
+  });
+  it("runs regex", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.regex(mockItems.description, "ru.*"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex($1)`,
+    );
+    expect(generated.params).toStrictEqual(["ru.*"]);
 
     await query;
   });

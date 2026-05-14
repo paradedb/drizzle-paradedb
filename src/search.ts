@@ -2,21 +2,6 @@ import { AnyColumn, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
 type SearchValue = string | string[] | SQLWrapper;
-type ProximityValue = string | ProximityExpr;
-export type SnippetOptions = {
-  startTag?: string;
-  endTag?: string;
-  maxNumChars?: number;
-};
-export type SnippetsOptions = SnippetOptions & {
-  limit?: number;
-  offset?: number;
-  sortBy?: "score" | "position";
-};
-export type ParseOptions = {
-  lenient?: boolean;
-  conjunctionMode?: boolean;
-};
 
 export function boost(value: SearchValue, factor: number): SQL {
   return sql`${renderSearchValue(value)}::pdb.boost(${sql.raw(String(factor))})`;
@@ -51,6 +36,17 @@ export function tokenize(value: SearchValue, tokenizer: Tokenizer): SQL {
 export function score(key: SQLWrapper): SQL<number> {
   return sql<number>`pdb.score(${key})`;
 }
+
+export type SnippetOptions = {
+  startTag?: string;
+  endTag?: string;
+  maxNumChars?: number;
+};
+export type SnippetsOptions = SnippetOptions & {
+  limit?: number;
+  offset?: number;
+  sortBy?: "score" | "position";
+};
 
 export function snippet(
   column: SQLWrapper,
@@ -110,8 +106,31 @@ export function phrasePrefix(
     : sql<boolean>`${column} @@@ pdb.phrase_prefix(${renderStringArray(phrases)}, ${maxExpansions})`;
 }
 
+export type RegexPhraseOptions = {
+  slop?: number;
+  maxExpansions?: number;
+};
+
+export function regexPhrase(
+  column: SQLWrapper,
+  phrases: string[],
+  options: RegexPhraseOptions = {},
+): SQL<boolean> {
+  const args = [renderStringArray(phrases)];
+
+  if (options.slop !== undefined) args.push(sql`slop => ${options.slop}`);
+  if (options.maxExpansions !== undefined)
+    args.push(sql`max_expansions => ${options.maxExpansions}`);
+
+  return sql<boolean>`${column} @@@ pdb.regex_phrase(${sql.join(args, sql`, `)})`;
+}
+
 export function term(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} === ${renderSearchValue(value)}`;
+}
+
+export function regex(column: SQLWrapper, pattern: string): SQL<boolean> {
+  return sql<boolean>`${column} @@@ pdb.regex(${pattern})`;
 }
 
 export type RangeTermRelation = "Intersects" | "Contains" | "Within";
@@ -189,6 +208,8 @@ export function proxArray(...values: ProximityValue[]): ProximityExpr {
   return new ProximityExpr(sql`pdb.prox_array(${sql.join(values, sql`, `)})`);
 }
 
+type ProximityValue = string | ProximityExpr;
+
 export function proximity(
   column: SQLWrapper,
   value: ProximityValue,
@@ -199,6 +220,11 @@ export function proximity(
 export function all(column: SQLWrapper): SQL<boolean> {
   return sql<boolean>`${column} @@@ pdb.all()`;
 }
+
+export type ParseOptions = {
+  lenient?: boolean;
+  conjunctionMode?: boolean;
+};
 
 export function parse(
   column: SQLWrapper,
