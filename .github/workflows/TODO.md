@@ -1,0 +1,3 @@
+- schema compat
+- release
+- run examples
