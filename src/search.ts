@@ -1,14 +1,14 @@
-import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { AnyColumn, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
 type SearchValue = string | string[] | SQLWrapper;
 type ProximityValue = string | ProximityExpr;
-type SnippetOptions = {
+export type SnippetOptions = {
   startTag?: string;
   endTag?: string;
   maxNumChars?: number;
 };
-type SnippetsOptions = SnippetOptions & {
+export type SnippetsOptions = SnippetOptions & {
   limit?: number;
   offset?: number;
   sortBy?: "score" | "position";
@@ -60,6 +60,24 @@ export function snippets(
   options?: SnippetsOptions,
 ): SQL<string[]> {
   return sql<string[]>`pdb.snippets(${column}${renderSnippetOptions(options)})`;
+}
+
+function renderSnippetOptions(options: SnippetsOptions = {}): SQL {
+  const args: SQL[] = [];
+
+  if (options.startTag !== undefined)
+    args.push(sql`start_tag => ${options.startTag}`);
+  if (options.endTag !== undefined)
+    args.push(sql`end_tag => ${options.endTag}`);
+  if (options.maxNumChars !== undefined)
+    args.push(sql`max_num_chars => ${options.maxNumChars}`);
+  if (options.limit !== undefined) args.push(sql`"limit" => ${options.limit}`);
+  if (options.offset !== undefined)
+    args.push(sql`"offset" => ${options.offset}`);
+  if (options.sortBy !== undefined)
+    args.push(sql`sort_by => ${options.sortBy}`);
+
+  return args.length ? sql`, ${sql.join(args, sql`, `)}` : sql``;
 }
 
 export function snippetPositions(column: SQLWrapper): SQL<[number, number][]> {
@@ -135,26 +153,76 @@ export function all(column: SQLWrapper): SQL<boolean> {
   return sql<boolean>`${column} @@@ pdb.all()`;
 }
 
-function renderSearchValue(value: SearchValue): SQL {
-  return Array.isArray(value)
-    ? sql`ARRAY[${sql.join(value, sql`, `)}]`
-    : sql`${value}`;
+export type MoreLikeThisDocumentOptions = {
+  minTermFrequency?: number;
+  minDocFrequency?: number;
+  maxDocFrequency?: number;
+  maxQueryTerms?: number;
+  minWordLength?: number;
+  maxWordLength?: number;
+  stopwords?: string[];
+};
+
+export type MoreLikeThisOptions = MoreLikeThisDocumentOptions & {
+  fields?: string[];
+};
+
+export function moreLikeThisDocument(
+  column: SQLWrapper,
+  document: Record<string, unknown>,
+  options: MoreLikeThisDocumentOptions = {},
+): SQL<boolean> {
+  const args = collectMoreLikeThisOptions(options);
+  return args.length
+    ? sql<boolean>`${column} @@@ pdb.more_like_this(document => ${JSON.stringify(document)}, ${sql.join(args, sql`, `)})`
+    : sql<boolean>`${column} @@@ pdb.more_like_this(document => ${JSON.stringify(document)})`;
 }
 
-function renderSnippetOptions(options: SnippetsOptions = {}): SQL {
-  const args: SQL[] = [];
+export function moreLikeThisId(
+  column: AnyColumn,
+  id: any,
+  options: MoreLikeThisOptions = {},
+): SQL<boolean> {
+  const sqlType = sql.raw(columnCastType(column));
+  const args = collectMoreLikeThisOptions(options);
+  return args.length
+    ? sql<boolean>`${column} @@@ pdb.more_like_this(key_value => ${id}::${sqlType}, ${sql.join(args, sql`, `)})`
+    : sql<boolean>`${column} @@@ pdb.more_like_this(key_value => ${id}::${sqlType})`;
+}
 
-  if (options.startTag !== undefined)
-    args.push(sql`start_tag => ${options.startTag}`);
-  if (options.endTag !== undefined)
-    args.push(sql`end_tag => ${options.endTag}`);
-  if (options.maxNumChars !== undefined)
-    args.push(sql`max_num_chars => ${options.maxNumChars}`);
-  if (options.limit !== undefined) args.push(sql`"limit" => ${options.limit}`);
-  if (options.offset !== undefined)
-    args.push(sql`"offset" => ${options.offset}`);
-  if (options.sortBy !== undefined)
-    args.push(sql`sort_by => ${options.sortBy}`);
+function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
+  var args: SQL[] = [];
+  if (options?.fields !== undefined)
+    args.push(sql`fields => ${renderStringArray(options.fields)}`);
+  if (options?.minTermFrequency !== undefined)
+    args.push(sql`min_term_frequency => ${options!.minTermFrequency}`);
+  if (options?.minDocFrequency !== undefined)
+    args.push(sql`min_doc_frequency => ${options!.minDocFrequency}`);
+  if (options?.maxDocFrequency !== undefined)
+    args.push(sql`max_doc_frequency => ${options!.maxDocFrequency}`);
+  if (options?.maxQueryTerms !== undefined)
+    args.push(sql`max_query_terms => ${options!.maxQueryTerms}`);
+  if (options?.minWordLength !== undefined)
+    args.push(sql`min_word_length => ${options!.minWordLength}`);
+  if (options?.maxWordLength !== undefined)
+    args.push(sql`max_word_length => ${options!.maxWordLength}`);
+  if (options?.stopwords !== undefined)
+    args.push(sql`stopwords => ${renderStringArray(options!.stopwords)}`);
+  return args;
+}
 
-  return args.length ? sql`, ${sql.join(args, sql`, `)}` : sql``;
+function columnCastType(column: AnyColumn): string {
+  const sqlType = column.getSQLType();
+  if (sqlType === "serial") return "integer";
+  if (sqlType === "smallserial") return "smallint";
+  if (sqlType === "bigserial") return "bigint";
+  return sqlType;
+}
+
+function renderSearchValue(value: SearchValue): SQL {
+  return Array.isArray(value) ? renderStringArray(value) : sql`${value}`;
+}
+
+function renderStringArray(values: string[]): SQL {
+  return sql`ARRAY[${sql.join(values, sql`, `)}]`;
 }

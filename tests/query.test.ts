@@ -1,9 +1,19 @@
 import { desc, sql } from "drizzle-orm";
+import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { search, tokenizer } from "../src/index.js";
 import { client, db } from "./db.js";
 import { mockItems } from "./mock-items.js";
+import {
+  MoreLikeThisDocumentOptions,
+  MoreLikeThisOptions,
+} from "../src/search.js";
+
+const mockItemsWithSerialId = pgTable("mock_items", {
+  id: serial("id").primaryKey(),
+  description: text("description"),
+});
 
 beforeAll(async () => {
   await db.execute(sql`
@@ -559,6 +569,153 @@ describe("ParadeDB query language", () => {
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.all()`,
     );
     expect(generated.params).toStrictEqual([]);
+
+    await query;
+  });
+  it("runs more_like_this with document", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.moreLikeThisDocument(mockItems.id, {
+          description: "Sleek running shoes",
+          category: "footwear",
+        }),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(document => $1)`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"description":"Sleek running shoes","category":"footwear"}`,
+    ]);
+
+    await query;
+  });
+  it("runs basic more_like_this with id", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.moreLikeThisId(mockItems.id, 12));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer)`,
+    );
+    expect(generated.params).toStrictEqual([12]);
+
+    await query;
+  });
+  it("runs more_like_this with a serial id column", async () => {
+    const query = db
+      .select({
+        id: mockItemsWithSerialId.id,
+        description: mockItemsWithSerialId.description,
+      })
+      .from(mockItemsWithSerialId)
+      .where(search.moreLikeThisId(mockItemsWithSerialId.id, 12));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer)`,
+    );
+    expect(generated.params).toStrictEqual([12]);
+
+    await query;
+  });
+  it("runs more_like_this document with options", async () => {
+    const options: MoreLikeThisDocumentOptions = {
+      minTermFrequency: 2,
+      minDocFrequency: 1,
+      maxDocFrequency: 100,
+      maxQueryTerms: 1000,
+      minWordLength: 10,
+      maxWordLength: 1000,
+      stopwords: ["the", "a"],
+    };
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.moreLikeThisDocument(
+          mockItems.id,
+          {
+            description: "Sleek running shoes",
+            category: "footwear",
+          },
+          options,
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(document => $1, min_term_frequency => $2, min_doc_frequency => $3, max_doc_frequency => $4, max_query_terms => $5, min_word_length => $6, max_word_length => $7, stopwords => ARRAY[$8, $9])`,
+    );
+    expect(generated.params).toStrictEqual([
+      `{"description":"Sleek running shoes","category":"footwear"}`,
+      2,
+      1,
+      100,
+      1000,
+      10,
+      1000,
+      "the",
+      "a",
+    ]);
+
+    await query;
+  });
+  it("runs more_like_this id with options", async () => {
+    const options: MoreLikeThisOptions = {
+      fields: ["description", "category"],
+      minTermFrequency: 2,
+      minDocFrequency: 1,
+      maxDocFrequency: 100,
+      maxQueryTerms: 1000,
+      minWordLength: 10,
+      maxWordLength: 1000,
+      stopwords: ["the", "a"],
+    };
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.moreLikeThisId(mockItems.id, 12, options));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer, fields => ARRAY[$2, $3], min_term_frequency => $4, min_doc_frequency => $5, max_doc_frequency => $6, max_query_terms => $7, min_word_length => $8, max_word_length => $9, stopwords => ARRAY[$10, $11])`,
+    );
+    expect(generated.params).toStrictEqual([
+      12,
+      "description",
+      "category",
+      2,
+      1,
+      100,
+      1000,
+      10,
+      1000,
+      "the",
+      "a",
+    ]);
 
     await query;
   });
