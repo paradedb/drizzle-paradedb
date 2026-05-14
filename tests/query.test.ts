@@ -670,6 +670,24 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs regex with boost", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.boost(search.regex(mockItems.description, "ru.*"), 2));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex($1)::pdb.boost(2)`,
+    );
+    expect(generated.params).toStrictEqual(["ru.*"]);
+
+    await query;
+  });
   it("runs range term", async () => {
     const query = db
       .select({
