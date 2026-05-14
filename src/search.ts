@@ -114,6 +114,39 @@ export function term(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} === ${renderSearchValue(value)}`;
 }
 
+export type RangeTermRelation = "Intersects" | "Contains" | "Within";
+type RangeTermValue = number | bigint | Date | SQLWrapper;
+type RangeTermRangeValue = string | SQLWrapper;
+export function rangeTerm(
+  column: AnyColumn,
+  value: RangeTermValue,
+): SQL<boolean>;
+export function rangeTerm(
+  column: AnyColumn,
+  value: RangeTermRangeValue,
+  relation: RangeTermRelation,
+): SQL<boolean>;
+export function rangeTerm(
+  column: AnyColumn,
+  value: RangeTermValue | RangeTermRangeValue,
+  relation?: RangeTermRelation,
+): SQL<boolean> {
+  return relation === undefined
+    ? sql<boolean>`${column} @@@ pdb.range_term(${value}::${sql.raw(rangeElementCastType(column))})`
+    : sql<boolean>`${column} @@@ pdb.range_term(${value}::${sql.raw(columnCastType(column))}, ${relation})`;
+}
+
+function rangeElementCastType(column: AnyColumn): string {
+  const sqlType = columnCastType(column);
+  if (sqlType === "int4range") return "int4";
+  if (sqlType === "int8range") return "int8";
+  if (sqlType === "numrange") return "numeric";
+  if (sqlType === "daterange") return "date";
+  if (sqlType === "tsrange") return "timestamp";
+  if (sqlType === "tstzrange") return "timestamptz";
+  return sqlType;
+}
+
 export class ProximityExpr implements SQLWrapper {
   constructor(private expr: SQL) {}
 

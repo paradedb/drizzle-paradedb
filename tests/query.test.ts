@@ -590,6 +590,42 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs range term", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        weightRange: mockItems.weightRange,
+      })
+      .from(mockItems)
+      .where(search.rangeTerm(mockItems.weightRange, 1));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "weight_range" from "mock_items" where "mock_items"."weight_range" @@@ pdb.range_term($1::int4)`,
+    );
+    expect(generated.params).toStrictEqual([1]);
+
+    await query;
+  });
+  it("runs range term with relation", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        weightRange: mockItems.weightRange,
+      })
+      .from(mockItems)
+      .where(search.rangeTerm(mockItems.weightRange, "(10, 12]", "Intersects"));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "weight_range" from "mock_items" where "mock_items"."weight_range" @@@ pdb.range_term($1::int4range, $2)`,
+    );
+    expect(generated.params).toStrictEqual(["(10, 12]", "Intersects"]);
+
+    await query;
+  });
   it("runs query with pdb.all()", async () => {
     const query = db
       .select({
