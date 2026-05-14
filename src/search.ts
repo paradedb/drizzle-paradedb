@@ -96,6 +96,16 @@ export function phrase(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} ### ${renderSearchValue(value)}`;
 }
 
+export function phrasePrefix(
+  column: SQLWrapper,
+  phrases: string[],
+  maxExpansions?: number,
+): SQL<boolean> {
+  return maxExpansions === undefined
+    ? sql<boolean>`${column} @@@ pdb.phrase_prefix(${renderStringArray(phrases)})`
+    : sql<boolean>`${column} @@@ pdb.phrase_prefix(${renderStringArray(phrases)}, ${maxExpansions})`;
+}
+
 export function term(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} === ${renderSearchValue(value)}`;
 }

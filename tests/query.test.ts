@@ -366,6 +366,42 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs phrase prefix", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.phrasePrefix(mockItems.description, ["running", "sh"]));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.phrase_prefix(ARRAY[$1, $2])`,
+    );
+    expect(generated.params).toStrictEqual(["running", "sh"]);
+
+    await query;
+  });
+  it("runs phrase prefix with max expansions", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.phrasePrefix(mockItems.description, ["running", "sh"], 3));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.phrase_prefix(ARRAY[$1, $2], $3)`,
+    );
+    expect(generated.params).toStrictEqual(["running", "sh", 3]);
+
+    await query;
+  });
   it("runs basic proximity", async () => {
     const query = db
       .select({
