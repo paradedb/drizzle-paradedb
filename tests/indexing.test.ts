@@ -96,6 +96,33 @@ describe("ParadeDB indexing helpers", () => {
 
     await runStatements(statements);
   });
+  it("generates search tokenizer with no arguments", async () => {
+    const products = pgTable(
+      "indexing_test_products",
+      {
+        id: integer("id").primaryKey(),
+        description: text("description"),
+        category: text("category"),
+        categories: text("categories").array(),
+        tags: varchar("tags", { length: 255 }).array(),
+      },
+      (table) => [
+        indexing
+          .bm25Index("indexing_test_products_bm25_idx", {
+            searchTokenizer: tokenizer.simple(),
+          })
+          .on(table.id, table.categories),
+      ],
+    );
+
+    const prev = await generateDrizzleJson({});
+    const cur = await generateDrizzleJson({ products });
+    const statements = await generateMigration(prev, cur);
+
+    expect(statements[1]).toStrictEqual(`CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id","categories") WITH (key_field=id, search_tokenizer='simple');`);
+
+    await runStatements(statements);
+  });
 });
 
 async function runStatements(statements: string[]) {

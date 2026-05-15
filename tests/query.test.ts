@@ -192,7 +192,25 @@ describe("ParadeDB query language", () => {
     );
     expect(generated.params).toStrictEqual(["running shoes"]);
   });
-  it("runs matchAll with fuzzy", async () => {
+  it("runs fuzzy with minimal arguments", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.matchAll(mockItems.description, search.fuzzy("shose", 1)));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1)`,
+    );
+    expect(generated.params).toStrictEqual(["shose"]);
+
+    await query;
+  });
+  it("runs fuzzy with all arguments", async () => {
     const query = db
       .select({
         id: mockItems.id,
@@ -200,13 +218,16 @@ describe("ParadeDB query language", () => {
       })
       .from(mockItems)
       .where(
-        search.matchAll(mockItems.description, search.fuzzy("shose", 1, true)),
+        search.matchAll(
+          mockItems.description,
+          search.fuzzy("shose", 1, true, false),
+        ),
       );
 
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1, t)`,
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1, t, f)`,
     );
     expect(generated.params).toStrictEqual(["shose"]);
 
@@ -726,7 +747,7 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
-  it("runs range term", async () => {
+  it("runs range term with range element", async () => {
     const query = db
       .select({
         id: mockItems.id,
@@ -1174,4 +1195,15 @@ describe("ParadeDB query language", () => {
       await query;
     },
   );
+  // There is no tokenizer that accepts boolean positional arguments right now
+  // but it's simpler to use the same TokenizerArg type for arguments and options
+  // so this unit test checks the boolean rendering codepath.
+  it("renders tokenizer with boolean positional arguments", () => {
+    const result = tokenizer.renderTokenizer({
+      name: "mytokenizer",
+      args: [true, false],
+      options: { someBool: true },
+    });
+    expect(result).toBe(`pdb.mytokenizer(true,false,'someBool=true')`);
+  });
 });
