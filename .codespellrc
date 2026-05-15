@@ -1,0 +1,4 @@
+[codespell]
+ignore-words = .codespellignore
+skip = pnpm-lock.yaml,./dist,./coverage,./node_modules
+ignore-multiline-regex = \{\s*/\*\s*\*\s*codespell:ignore-begin\s*\*\s*\*/\s*\}\s*.*?\s*\{\s*/\*\s*\*\s*codespell:ignore-end\s*\*\s*\*/\s*\}

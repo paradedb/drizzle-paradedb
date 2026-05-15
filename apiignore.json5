@@ -1,9 +1,9 @@
 {
-  "_comment": "Symbols present in the pg_search schema that sqlalchemy-paradedb intentionally does not wrap. Remove an entry here when you add it to api.json. Sections can be either a flat list or grouped object of lists.",
+  _comment: "Symbols present in the pg_search schema that sqlalchemy-paradedb intentionally does not wrap. Remove an entry here when you add it to api.json. Sections can be either a flat list or grouped object of lists.",
 
-  "operators": [],
+  operators: [],
 
-  "functions": [
+  functions: [
     "pdb.agg_fn",
     "pdb.agg_placeholder_agg_placeholder_finalize",
     "pdb.agg_placeholder_agg_placeholder_state",
@@ -271,12 +271,8 @@
     "pdb.tokenize_simple",
     "pdb.tokenize_source_code",
     "pdb.tokenize_unicode_words",
-    "pdb.tokenize_whitespace"
+    "pdb.tokenize_whitespace",
   ],
 
-  "types": [
-    "pdb.alias",
-    "pdb.proximityclause",
-    "pdb.query"
-  ]
+  types: ["pdb.alias", "pdb.proximityclause", "pdb.query"],
 }
