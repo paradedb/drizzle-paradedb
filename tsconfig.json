@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src", "tests", "scripts"]
+  "include": ["src", "tests", "scripts", "examples"]
 }

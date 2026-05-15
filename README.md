@@ -41,14 +41,15 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 | ParadeDB   | 0.22.0+                       |
 | PostgreSQL | 15+ (with ParadeDB extension) |
 
-<!-- ## Examples - TODO -->
+## Examples
 
-<!-- - [Quickstart](examples/quickstart/quickstart.py) -->
-<!-- - [Faceted Search](examples/faceted_search/faceted_search.py) -->
-<!-- - [Autocomplete](examples/autocomplete/autocomplete.py) -->
-<!-- - [More Like This](examples/more_like_this/more_like_this.py) -->
-<!-- - [Hybrid Search (RRF)](examples/hybrid_rrf/hybrid_rrf.py) -->
-<!-- - [RAG](examples/rag/rag.py) -->
+Run all examples:
+
+```bash
+pnpm examples
+```
+
+- [Quickstart](examples/quickstart.ts)
 
 ## Contributing
 

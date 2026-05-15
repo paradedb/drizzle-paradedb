@@ -21,6 +21,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
     "db:setup": "bash scripts/setup_db.sh",
+    "examples": "tsx examples/index.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
