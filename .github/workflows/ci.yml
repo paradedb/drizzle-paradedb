@@ -44,3 +44,13 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage/cobertura-coverage.xml
+          flags: drizzle-paradedb
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
