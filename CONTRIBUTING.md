@@ -38,6 +38,9 @@ cd drizzle-paradedb
 # Install dependencies
 pnpm install
 
+# Install prek hooks
+pnpm dlx @j178/prek install
+
 # Start the ParadeDB container and export DATABASE_URL
 pnpm db:setup
 
@@ -62,9 +65,10 @@ All changes to drizzle-paradedb happen through GitHub Pull Requests. Here is the
 1. Before working on a change, please check if there is already a GitHub issue open for it.
 2. If there is not, please open an issue first. This gives the community visibility into your work and allows others to make suggestions and leave comments.
 3. Fork the drizzle-paradedb repo and branch out from the `main` branch.
-4. Make your changes. If you've added new functionality, please add tests. We will not merge a feature without appropriate tests.
-5. Open a pull request towards the `main` branch. Ensure that all tests and checks pass. Note that the drizzle-paradedb repository has pull request title linting in place and follows the [Conventional Commits spec](https://www.conventionalcommits.org/).
-6. Congratulations! Our team will review your pull request.
+4. Install [prek](https://prek.j178.dev/quickstart/#already-using-pre-commit) hooks within your fork with `pnpm dlx @j178/prek install` to ensure code quality and consistency with upstream.
+5. Make your changes. If you've added new functionality, please add tests. We will not merge a feature without appropriate tests.
+6. Open a pull request towards the `main` branch. Ensure that all tests and checks pass. Note that the drizzle-paradedb repository has pull request title linting in place and follows the [Conventional Commits spec](https://www.conventionalcommits.org/).
+7. Congratulations! Our team will review your pull request.
 
 If your change touches SQL wrappers, API constants, packaging, or release metadata, run the API/package checks under `scripts/` before opening the PR.
 
