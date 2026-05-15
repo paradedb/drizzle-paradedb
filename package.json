@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paradedb/drizzle-paradedb.git"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
