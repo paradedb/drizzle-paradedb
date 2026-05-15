@@ -49,6 +49,12 @@ Run all examples:
 pnpm examples
 ```
 
+Or a specific one:
+
+```bash
+pnpm examples autocomplete.ts
+```
+
 - [Quickstart](examples/quickstart.ts)
 - [Faceted search](examples/faceted-search.ts)
 - [Autocomplete](examples/autocomplete.ts)

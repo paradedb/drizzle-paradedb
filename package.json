@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
     "db:setup": "bash scripts/setup_db.sh",
-    "examples": "tsx examples/quickstart.ts && tsx examples/autocomplete.ts && tsx examples/more-like-this.ts && tsx examples/faceted-search.ts && tsx examples/hybrid-rrf.ts",
+    "examples": "bash scripts/run_examples.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
