@@ -119,7 +119,9 @@ describe("ParadeDB indexing helpers", () => {
     const cur = await generateDrizzleJson({ products });
     const statements = await generateMigration(prev, cur);
 
-    expect(statements[1]).toStrictEqual(`CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id","categories") WITH (key_field=id, search_tokenizer='simple');`);
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id","categories") WITH (key_field=id, search_tokenizer='simple');`,
+    );
 
     await runStatements(statements);
   });
