@@ -1,5 +1,5 @@
 {
-  "name": "drizzle-paradedb",
+  "name": "@paradedb/drizzle-paradedb",
   "version": "1.0.0",
   "description": "",
   "type": "module",
