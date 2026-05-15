@@ -17,9 +17,9 @@
 </h3>
 
 <p align="center">
-  <!-- <a href="https://www.npmjs.com/package/drizzle-paradedb"><img src="https://img.shields.io/npm/v/drizzle-paradedb" alt="npm"></a>&nbsp; -->
-  <!-- <a href="https://www.npmjs.com/package/drizzle-paradedb"><img src="https://img.shields.io/node/v/drizzle-paradedb" alt="Node Versions"></a>&nbsp; -->
-  <!-- <a href="https://www.npmjs.com/package/drizzle-paradedb"><img src="https://img.shields.io/npm/dm/drizzle-paradedb" alt="Downloads"></a>&nbsp; -->
+  <a href="https://www.npmjs.com/package/@paradedb/drizzle-paradedb"><img src="https://img.shields.io/npm/v/@paradedb/drizzle-paradedb" alt="npm"></a>&nbsp;
+  <a href="https://www.npmjs.com/package/@paradedb/drizzle-paradedb"><img src="https://img.shields.io/node/v/@paradedb/drizzle-paradedb" alt="Node Versions"></a>&nbsp;
+  <a href="https://www.npmjs.com/package/@paradedb/drizzle-paradedb"><img src="https://img.shields.io/npm/dm/@paradedb/drizzle-paradedb" alt="Downloads"></a>&nbsp;
   <a href="https://codecov.io/gh/paradedb/drizzle-paradedb"><img src="https://codecov.io/gh/paradedb/drizzle-paradedb/graph/badge.svg" alt="Codecov"></a>&nbsp;
   <a href="https://github.com/paradedb/drizzle-paradedb?tab=MIT-1-ov-file#readme"><img src="https://img.shields.io/github/license/paradedb/drizzle-paradedb?color=blue" alt="License"></a>&nbsp;
   <a href="https://paradedb.com/slack"><img src="https://img.shields.io/badge/Join%20Slack-purple?logo=slack" alt="Community"></a>&nbsp;
