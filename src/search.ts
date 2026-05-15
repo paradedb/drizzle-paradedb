@@ -41,6 +41,10 @@ export function score(key: SQLWrapper): SQL<number> {
   return sql<number>`pdb.score(${key})`;
 }
 
+export function exists(column: AnyColumn): SQL<boolean> {
+  return sql<boolean>`${column} @@@ pdb.exists()`;
+}
+
 export type SnippetOptions = {
   startTag?: string;
   endTag?: string;

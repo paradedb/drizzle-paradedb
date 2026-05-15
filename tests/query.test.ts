@@ -230,6 +230,22 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs basic exists query", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(search.exists(mockItems.rating));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."rating" @@@ pdb.exists()`);
+    expect(generated.params).toStrictEqual([]);
+
+    await query;
+  });
   it("runs snippet", async () => {
     const query = db
       .select({
