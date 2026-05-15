@@ -45,6 +45,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run examples
+        run: pnpm examples
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:
@@ -54,3 +57,16 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Check API coverage
+        run: uv run --with json5 scripts/check_api_coverage.py

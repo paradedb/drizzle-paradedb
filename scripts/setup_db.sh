@@ -38,7 +38,7 @@ for _ in {1..30}; do
   if docker exec "$CONTAINER_NAME" pg_isready -U "$USER" -d "$DB" >/dev/null 2>&1; then
     break
   fi
-  sleep 2
+  sleep 5
 done
 
 if ! docker exec "$CONTAINER_NAME" pg_isready -U "$USER" -d "$DB" >/dev/null 2>&1; then
