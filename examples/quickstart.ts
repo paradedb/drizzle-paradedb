@@ -1,11 +1,6 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 
-import {
-  closeDb,
-  db,
-  mockItems,
-  setupMockItems,
-} from "./common.js";
+import { closeDb, db, mockItems, setupMockItems } from "./common.js";
 import { search } from "../src/index.js";
 
 export async function runQuickstart(): Promise<void> {

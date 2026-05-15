@@ -1,11 +1,6 @@
 import { desc } from "drizzle-orm";
 
-import {
-  closeDb,
-  db,
-  mockItems,
-  setupMockItems,
-} from "./common.js";
+import { closeDb, db, mockItems, setupMockItems } from "./common.js";
 import { search } from "../src/index.js";
 
 const model = process.env.RAG_MODEL ?? "anthropic/claude-3-haiku";

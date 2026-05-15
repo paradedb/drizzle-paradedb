@@ -2,12 +2,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { readFile } from "node:fs/promises";
 
-import {
-  closeDb,
-  db,
-  mockItems,
-  setupMockItems,
-} from "./common.js";
+import { closeDb, db, mockItems, setupMockItems } from "./common.js";
 import { search } from "../src/index.js";
 
 type HybridRow = {
