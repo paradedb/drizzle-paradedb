@@ -37,8 +37,8 @@ export function alias(column: SQLWrapper, alias: string): SQL {
   return sql`((${column})::pdb.alias(${sql.raw(quote(alias))}))`;
 }
 
-export function score(key: SQLWrapper): SQL<number> {
-  return sql<number>`pdb.score(${key})`;
+export function score(column: AnyColumn): SQL<number> {
+  return sql<number>`pdb.score(${column})`;
 }
 
 export function exists(column: AnyColumn): SQL<boolean> {

@@ -241,8 +241,30 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(`select "id", "description" from "mock_items" where "mock_items"."rating" @@@ pdb.exists()`);
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."rating" @@@ pdb.exists()`,
+    );
     expect(generated.params).toStrictEqual([]);
+
+    await query;
+  });
+  it("runs query with score", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+        score: search.score(mockItems.id),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shose"))
+      .orderBy(search.score(mockItems.id));
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description", pdb.score("id") from "mock_items" where "mock_items"."description" ||| $1 order by pdb.score("mock_items"."id")`,
+    );
+    expect(generated.params).toStrictEqual(["shose"]);
 
     await query;
   });
