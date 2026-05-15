@@ -50,6 +50,11 @@ pnpm examples
 ```
 
 - [Quickstart](examples/quickstart.ts)
+- [Faceted search](examples/faceted-search.ts)
+- [Autocomplete](examples/autocomplete.ts)
+- [More Like This](examples/more-like-this.ts)
+- [Hybrid RRF](examples/hybrid-rrf.ts)
+- [RAG](examples/rag.ts)
 
 ## Contributing
 

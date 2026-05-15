@@ -45,6 +45,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run examples
+        run: pnpm examples
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:

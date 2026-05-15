@@ -1,55 +1,17 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
+
 import {
-  boolean,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
-import postgres from "postgres";
+  closeDb,
+  db,
+  mockItems,
+  setupMockItems,
+} from "./common.js";
+import { search } from "../src/index.js";
 
-import { indexing, search, tokenizer } from "../src/index.js";
-
-const client = postgres(
-  process.env.DATABASE_URL ??
-    "postgres://postgres:postgres@localhost:5432/postgres",
-  { onnotice: () => undefined },
-);
-const db = drizzle({ client });
-
-const mockItems = pgTable(
-  "mock_items",
-  {
-    id: integer("id").primaryKey(),
-    description: text("description").notNull(),
-    category: varchar("category", { length: 255 }).notNull(),
-    rating: integer("rating").notNull(),
-    inStock: boolean("in_stock").notNull(),
-    createdAt: timestamp("created_at").notNull(),
-    metadata: jsonb("metadata"),
-  },
-  (table) => [
-    indexing
-      .bm25Index("search_idx")
-      .on(
-        table.id,
-        table.description,
-        indexing.bm25Field(table.category, tokenizer.literal()),
-        table.rating,
-        table.inStock,
-        table.createdAt,
-        table.metadata,
-      ),
-  ],
-);
-
-try {
-  console.log("============================================================");
+export async function runQuickstart(): Promise<void> {
+  console.log("=".repeat(60));
   console.log("drizzle-paradedb Quickstart Example");
-  console.log("============================================================");
+  console.log("=".repeat(60));
 
   await setupMockItems();
 
@@ -59,7 +21,7 @@ try {
     .from(mockItems)
     .where(search.matchAll(mockItems.description, "shoes"))
     .limit(5)) {
-    console.log(`  - ${item.description.slice(0, 60)}...`);
+    console.log(`  • ${item.description.slice(0, 60)}...`);
   }
 
   console.log("\n--- Scored Search: 'running' ---");
@@ -73,7 +35,7 @@ try {
     .orderBy(desc(search.score(mockItems.id)))
     .limit(5)) {
     console.log(
-      `  - ${item.description.slice(0, 50)}... (score: ${item.score.toFixed(2)})`,
+      `  • ${item.description.slice(0, 50)}... (score: ${item.score.toFixed(2)})`,
     );
   }
 
@@ -88,7 +50,7 @@ try {
     .orderBy(desc(search.score(mockItems.id)))
     .limit(5)) {
     console.log(
-      `  - ${item.description.slice(0, 50)}... (score: ${item.score.toFixed(2)})`,
+      `  • ${item.description.slice(0, 50)}... (score: ${item.score.toFixed(2)})`,
     );
   }
 
@@ -105,7 +67,7 @@ try {
     .where(search.matchAll(mockItems.description, "shoes"))
     .orderBy(desc(search.score(mockItems.id)))
     .limit(3)) {
-    console.log(`  - ${item.snippet}`);
+    console.log(`  • ${item.snippet}`);
   }
 
   console.log("\n--- Filtered Search: 'shoes' + in_stock + rating >= 4 ---");
@@ -126,28 +88,17 @@ try {
     .orderBy(desc(search.score(mockItems.id)))
     .limit(5)) {
     console.log(
-      `  - ${item.description.slice(0, 40)}... (rating: ${item.rating})`,
+      `  • ${item.description.slice(0, 40)}... (rating: ${item.rating})`,
     );
   }
 
-  console.log("\n============================================================");
+  console.log("\n" + "=".repeat(60));
   console.log("Done!");
-} finally {
-  await db.execute(sql`DROP INDEX IF EXISTS search_idx`).catch(() => undefined);
-  await client.end();
 }
 
-async function setupMockItems() {
-  await db.execute(sql`
-    CALL paradedb.create_bm25_test_table(
-      schema_name => 'public',
-      table_name => 'mock_items'
-    )
-  `);
-  await db.execute(sql`DROP INDEX IF EXISTS search_idx`);
-  await db.execute(sql`
-    CREATE INDEX search_idx ON mock_items
-    USING bm25 (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata)
-    WITH (key_field='id')
-  `);
+try {
+  await runQuickstart();
+} finally {
+  await db.execute(sql`DROP INDEX IF EXISTS search_idx`).catch(() => undefined);
+  await closeDb();
 }
