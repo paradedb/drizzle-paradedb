@@ -1,8 +1,12 @@
 {
   "name": "@paradedb/drizzle-paradedb",
   "version": "0.0.0",
-  "description": "",
+  "description": "The official Drizzle integration for ParadeDB",
   "type": "module",
+  "homepage": "https://github.com/paradedb/drizzle-paradedb",
+  "bugs": {
+    "url": "https://github.com/paradedb/drizzle-paradedb/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paradedb/drizzle-paradedb.git"
@@ -27,9 +31,22 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "paradedb",
+    "drizzle",
+    "postgres",
+    "postgresql",
+    "search",
+    "bm25",
+    "text search",
+    "full text search",
+    "hybrid search"
+  ],
+  "author": "ParadeDB, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {
     "@types/node": "^25.7.0",
