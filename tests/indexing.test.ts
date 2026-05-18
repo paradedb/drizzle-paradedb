@@ -4,6 +4,11 @@ import {
   generateDrizzleJson,
   generateMigration,
 } from "drizzle-kit/api-postgres";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { tokenizer, search, indexing } from "../src/index.js";
@@ -125,6 +130,101 @@ describe("ParadeDB indexing helpers", () => {
 
     await runStatements(statements);
   });
+
+  it("applies a bm25 index with drizzle-kit push", async () => {
+    const tempDir = await mkdtemp(
+      join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-bm25-"),
+    );
+
+    await writeFile(
+      join(tempDir, "schema.ts"),
+      `import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { indexing, tokenizer } from "../../src/index";
+
+export const products = pgTable("drizzle_kit_bm25_products", {
+  id: integer("id").primaryKey(),
+  description: text("description"),
+  category: text("category"),
+}, (table) => [
+  indexing.bm25Index("drizzle_kit_bm25_products_bm25_idx").on(
+    table.id,
+    indexing.bm25Field(table.description, tokenizer.simple()),
+    table.category,
+  ),
+]);
+`,
+    );
+
+    await writeFile(
+      join(tempDir, "drizzle.config.ts"),
+      `import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
+  schema: "./schema.ts",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/postgres",
+  },
+  schemaFilter: "public",
+  tablesFilter: "drizzle_kit_bm25_products",
+});
+`,
+    );
+
+    await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_bm25_products"));
+
+    try {
+      await promisify(execFile)(
+        process.execPath,
+        [
+          join(
+            dirname(fileURLToPath(import.meta.url)),
+            "..",
+            "node_modules",
+            "drizzle-kit",
+            "bin.cjs",
+          ),
+          "push",
+          "--config",
+          "drizzle.config.ts",
+          "--force",
+        ],
+        { cwd: tempDir },
+      );
+
+      const indexes = await client`
+          SELECT indexdef
+          FROM pg_indexes
+          WHERE schemaname = 'public'
+            AND tablename = 'drizzle_kit_bm25_products'
+            AND indexname = 'drizzle_kit_bm25_products_bm25_idx'
+        `;
+
+      expect(indexes.map((row) => row.indexdef)).toStrictEqual([
+        "CREATE INDEX drizzle_kit_bm25_products_bm25_idx ON public.drizzle_kit_bm25_products USING bm25 (id, ((description)::pdb.simple), category) WITH (key_field=id)",
+      ]);
+
+      await db.execute(
+        sql.raw(`
+          INSERT INTO drizzle_kit_bm25_products (id, description, category)
+          VALUES (1, 'comfortable running shoes', 'footwear')
+        `),
+      );
+
+      const results = await client`
+          SELECT id
+          FROM drizzle_kit_bm25_products
+          WHERE description &&& 'running'
+        `;
+
+      expect(results.map((row) => row.id)).toStrictEqual([1]);
+    } finally {
+      await db.execute(
+        sql.raw("DROP TABLE IF EXISTS drizzle_kit_bm25_products"),
+      );
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });
 
 async function runStatements(statements: string[]) {
