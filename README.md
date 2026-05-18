@@ -36,7 +36,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 | Component  | Supported                     |
 | ---------- | ----------------------------- |
-| Node       | 24.0+                         |
+| Node       | 22.12+                        |
 | Drizzle    | 1.0+                          |
 | ParadeDB   | 0.22.0+                       |
 | PostgreSQL | 15+ (with ParadeDB extension) |

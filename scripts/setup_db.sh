@@ -12,8 +12,6 @@ USER="${PARADEDB_USER:-postgres}"
 PASSWORD="${PARADEDB_PASSWORD:-postgres}"
 DB="${PARADEDB_DB:-postgres}"
 
-export DATABASE_URL="${DATABASE_URL:-postgres://$USER:$PASSWORD@localhost:$PORT/$DB}"
-
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required to set up the ParadeDB test database" >&2
   exit 1
