@@ -1,7 +1,7 @@
 # workflows/schema-compat.yml
 #
 # Schema Compatibility Check
-# Validates that the sqlalchemy-paradedb API wrapper stays in sync with the
+# Validates that the paradedb API wrapper stays in sync with the
 # ParadeDB SQL schema and that integration tests pass against the new version.
 # Triggered automatically on each paradedb release (via repository_dispatch)
 # or manually via workflow_dispatch.
@@ -43,81 +43,44 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install dependencies
-        run: |
-          uv venv --python "3.13"
-          uv sync --extra dev
-
       - name: Run Schema Compatibility Check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run --no-sync python scripts/check_schema_compat.py ${{ env.PARADEDB_VERSION }}
+        run: uv run --with json5 scripts/check_schema_compat.py ${{ env.PARADEDB_VERSION }}
 
-  integration-tests:
-    name: Integration Tests
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
 
-    services:
-      paradedb:
-        image: paradedb/paradedb:${{ inputs.version || github.event.client_payload.version }}-pg18
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 12
-
-    env:
-      PARADEDB_TEST_DSN: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      PGPASSWORD: postgres
-
     steps:
-      - name: Checkout
+      - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
-          enable-cache: true
+          node-version: 24
+          cache: pnpm
 
       - name: Install dependencies
-        run: |
-          uv venv --python "3.13"
-          uv sync --extra test
+        run: pnpm install
 
-      - name: Install pg client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Set up test database
+        run: pnpm db:setup
 
-      - name: Wait for ParadeDB
-        run: |
-          for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U postgres -d postgres && exit 0
-            sleep 2
-          done
-          echo "ParadeDB did not become ready" >&2
-          exit 1
+      - name: Run tests
+        run: pnpm test
 
-      - name: Run unit tests
-        run: uv run --no-sync pytest tests/unit
-
-      - name: Run integration tests
-        run: uv run --no-sync pytest -m integration
+      - name: Run examples
+        run: pnpm examples
 
   notify:
     name: Notify on Failure
     runs-on: ubuntu-latest
-    needs: [schema-compat, integration-tests]
+    needs: [schema-compat, tests]
     if: failure()
     steps:
       - name: Create GitHub Issue
@@ -132,7 +95,7 @@ jobs:
 
           **Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          Please investigate and update sqlalchemy-paradedb as needed.
+          Please investigate and update drizzle-paradedb as needed.
           EOF
           )" \
             --label bug
