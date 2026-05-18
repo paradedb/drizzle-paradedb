@@ -7,6 +7,7 @@ examples=(
   more-like-this.ts
   faceted-search.ts
   hybrid-rrf.ts
+  rag.ts
 )
 
 if [ "$#" -gt 0 ]; then
