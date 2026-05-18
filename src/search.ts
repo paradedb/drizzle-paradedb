@@ -276,7 +276,7 @@ export function moreLikeThisDocument(
 
 export function moreLikeThisId(
   column: AnyColumn,
-  id: any,
+  id: unknown,
   options: MoreLikeThisOptions = {},
 ): SQL<boolean> {
   const sqlType = sql.raw(columnCastType(column));
@@ -287,23 +287,23 @@ export function moreLikeThisId(
 }
 
 function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
-  var args: SQL[] = [];
+  const args: SQL[] = [];
   if (options?.fields !== undefined)
     args.push(sql`fields => ${renderStringArray(options.fields)}`);
   if (options?.minTermFrequency !== undefined)
-    args.push(sql`min_term_frequency => ${options!.minTermFrequency}`);
+    args.push(sql`min_term_frequency => ${options.minTermFrequency}`);
   if (options?.minDocFrequency !== undefined)
-    args.push(sql`min_doc_frequency => ${options!.minDocFrequency}`);
+    args.push(sql`min_doc_frequency => ${options.minDocFrequency}`);
   if (options?.maxDocFrequency !== undefined)
-    args.push(sql`max_doc_frequency => ${options!.maxDocFrequency}`);
+    args.push(sql`max_doc_frequency => ${options.maxDocFrequency}`);
   if (options?.maxQueryTerms !== undefined)
-    args.push(sql`max_query_terms => ${options!.maxQueryTerms}`);
+    args.push(sql`max_query_terms => ${options.maxQueryTerms}`);
   if (options?.minWordLength !== undefined)
-    args.push(sql`min_word_length => ${options!.minWordLength}`);
+    args.push(sql`min_word_length => ${options.minWordLength}`);
   if (options?.maxWordLength !== undefined)
-    args.push(sql`max_word_length => ${options!.maxWordLength}`);
+    args.push(sql`max_word_length => ${options.maxWordLength}`);
   if (options?.stopwords !== undefined)
-    args.push(sql`stopwords => ${renderStringArray(options!.stopwords)}`);
+    args.push(sql`stopwords => ${renderStringArray(options.stopwords)}`);
   return args;
 }
 
