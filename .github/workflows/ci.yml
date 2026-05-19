@@ -15,8 +15,20 @@ concurrency:
 
 jobs:
   test-and-validate:
-    name: Test and Validate
+    name: Node ${{ matrix.node-version }} / PG ${{ matrix.postgres-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node-version: "22"
+            postgres-version: "18"
+          - node-version: "23"
+            postgres-version: "18"
+          - node-version: "24"
+            postgres-version: "18"
+          - node-version: "22"
+            postgres-version: "15"
 
     steps:
       - name: Check out repository
@@ -28,7 +40,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.12.0
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Install dependencies
@@ -42,6 +54,8 @@ jobs:
 
       - name: Set up test database
         run: pnpm db:setup
+        env:
+          PARADEDB_POSTGRES_VERSION: ${{ matrix.postgres-version }}
 
       - name: Run tests
         run: pnpm test
@@ -53,7 +67,7 @@ jobs:
         uses: codecov/codecov-action@v6
         with:
           files: ./coverage/cobertura-coverage.xml
-          flags: drizzle-paradedb
+          flags: drizzle-paradedb,node${{ matrix.node-version }},pg${{ matrix.postgres-version }}
           fail_ci_if_error: false
           verbose: true
         env:
