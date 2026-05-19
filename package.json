@@ -1,6 +1,6 @@
 {
   "name": "@paradedb/drizzle-paradedb",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The official Drizzle integration for ParadeDB",
   "type": "module",
   "homepage": "https://github.com/paradedb/drizzle-paradedb",
@@ -55,7 +55,7 @@
     "postgres": "^3.4.9",
     "prettier": "^3.8.3",
     "tsup": "^8.5.1",
-    "tsx": "^4.22.2",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
