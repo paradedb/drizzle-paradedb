@@ -103,9 +103,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          npm install --no-save semver
           LATEST=$(gh release list --jq '.[] | select(.isLatest == true) | .name' --json=name,isLatest | sed 's/^v//' || echo "0.0.0")
-          if npx semver -r ">${LATEST:-0.0.0}" "${VERSION}"; then
+          if pnpm dlx semver -r ">${LATEST:-0.0.0}" "${VERSION}"; then
             echo "is_latest=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_latest=false" >> "$GITHUB_OUTPUT"
