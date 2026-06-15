@@ -122,8 +122,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm publish --access public
+          npm publish --access public --provenance
           echo "✅ Published ${PACKAGE_NAME} ${VERSION} to npm"
 
       - name: Summary
