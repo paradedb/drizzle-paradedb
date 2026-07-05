@@ -45,8 +45,6 @@ jobs:
         run: npm install -g markdownlint-cli
 
       - name: Run Markdown Lint
-        # Ignore node_modules — pnpm now populates it, and markdownlint (unlike
-        # Prettier) does not skip it by default.
         run: markdownlint "**/*.md" --ignore node_modules
 
       - name: Run Prettier
