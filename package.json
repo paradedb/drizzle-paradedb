@@ -2,35 +2,6 @@
   "name": "@paradedb/drizzle-paradedb",
   "version": "0.1.0",
   "description": "The official Drizzle integration for ParadeDB",
-  "type": "module",
-  "homepage": "https://github.com/paradedb/drizzle-paradedb",
-  "bugs": {
-    "url": "https://github.com/paradedb/drizzle-paradedb/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/paradedb/drizzle-paradedb.git"
-  },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "db:setup": "bash scripts/setup_db.sh",
-    "examples": "bash scripts/run_examples.sh",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
-  },
   "keywords": [
     "paradedb",
     "drizzle",
@@ -42,24 +13,53 @@
     "full text search",
     "hybrid search"
   ],
-  "author": "ParadeDB, Inc.",
-  "license": "MIT",
-  "engines": {
-    "node": ">=22.12.0"
+  "homepage": "https://github.com/paradedb/drizzle-paradedb",
+  "bugs": {
+    "url": "https://github.com/paradedb/drizzle-paradedb/issues"
   },
-  "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paradedb/drizzle-paradedb.git"
+  },
+  "license": "MIT",
+  "author": "ParadeDB, Inc.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "db:setup": "bash scripts/setup_db.sh",
+    "examples": "bash scripts/run_examples.sh",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "1.0.0-rc.2"
+  },
   "devDependencies": {
     "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^4.1.6",
     "drizzle-kit": "1.0.0-rc.2",
     "postgres": "^3.4.9",
-    "prettier": "^3.8.3",
+    "prettier": "^3.9.4",
     "tsup": "^8.5.1",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
-  "dependencies": {
-    "drizzle-orm": "1.0.0-rc.2"
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

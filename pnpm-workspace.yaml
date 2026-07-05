@@ -1,3 +1,8 @@
 overrides:
   esbuild@>=0.17.0 <0.28.1: ">=0.28.1"
   vite@>=8.0.0 <8.0.16: ">=8.0.16"
+
+# pnpm 11 hard-fails (ERR_PNPM_IGNORED_BUILDS) on unapproved build scripts;
+# esbuild (used by tsup/vitest) needs to compile, so allow it explicitly.
+allowBuilds:
+  esbuild: true
