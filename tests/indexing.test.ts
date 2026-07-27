@@ -12,9 +12,7 @@ import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { tokenizer, search, indexing } from "../src/index.js";
-import { client, db, supportsVectorSearch } from "./db.js";
-
-const vectorSearchSupported = await supportsVectorSearch();
+import { client, db } from "./db.js";
 
 afterAll(async () => {
   await client.end();
@@ -133,20 +131,15 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
-  it("generates vector field index SQL with opclasses", async () => {
+  it("generates and runs vector field index SQL with opclasses", async () => {
     const statements = await generateVectorIndexStatements();
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id);`,
     );
-  });
 
-  it.skipIf(!vectorSearchSupported)(
-    "runs vector field index SQL (requires pg_search vector support)",
-    async () => {
-      await runStatements(await generateVectorIndexStatements());
-    },
-  );
+    await runStatements(statements);
+  });
 
   it("applies a paradedb index with drizzle-kit push", async () => {
     const tempDir = await mkdtemp(
@@ -254,7 +247,7 @@ async function generateVectorIndexStatements(): Promise<string[]> {
     },
     (table) => [
       indexing
-        .paradedbIndex("indexing_test_products_bm25_idx")
+        .paradedbIndex("indexing_test_products_idx")
         .on(
           table.id,
           indexing.paradedbField(table.description, tokenizer.simple()),

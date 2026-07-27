@@ -1,9 +1,9 @@
 import { and, desc, sql } from "drizzle-orm";
-import { integer, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { indexing, search, tokenizer } from "../src/index.js";
-import { client, db, supportsVectorSearch } from "./db.js";
+import { search, tokenizer } from "../src/index.js";
+import { client, db } from "./db.js";
 import { mockItems } from "./mock-items.js";
 import {
   MoreLikeThisDocumentOptions,
@@ -14,14 +14,6 @@ const mockItemsWithSerialId = pgTable("mock_items", {
   id: serial("id").primaryKey(),
   description: text("description"),
 });
-
-const vectorItems = pgTable("vector_search_items", {
-  id: integer("id").primaryKey(),
-  description: text("description"),
-  embedding: indexing.vector("embedding", { dimensions: 3 }),
-});
-
-const vectorSearchSupported = await supportsVectorSearch();
 
 beforeAll(async () => {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
@@ -1231,108 +1223,81 @@ describe("ParadeDB query language", () => {
 });
 
 describe("vector search", () => {
-  beforeAll(async () => {
-    if (!vectorSearchSupported) return;
+  const queryVector = [1, 2, 3, 4, 5, 6, 7, 8];
 
-    await db.execute(sql`DROP TABLE IF EXISTS vector_search_items`);
-    await db.execute(sql`
-      CREATE TABLE vector_search_items (
-        id integer PRIMARY KEY,
-        description text,
-        embedding vector(3)
-      )
-    `);
-    await db.execute(sql`
-      INSERT INTO vector_search_items VALUES
-        (1, 'red running shoes', '[1,0,0]'),
-        (2, 'blue sneakers', '[0.9,0.1,0]'),
-        (3, 'green hat', '[0,0,1]')
-    `);
-    await db.execute(sql`
-      CREATE INDEX vector_search_items_idx ON vector_search_items
-      USING paradedb (id, description, embedding vector_l2_ops)
-      WITH (key_field='id')
-    `);
-  });
-
-  afterAll(async () => {
-    if (!vectorSearchSupported) return;
-    await db.execute(sql`DROP TABLE IF EXISTS vector_search_items`);
-  });
-
-  it("generates top-k l2 vector search SQL", () => {
+  it("runs a top-k l2 vector search", async () => {
     const query = db
-      .select({ id: vectorItems.id })
-      .from(vectorItems)
-      .where(search.all(vectorItems.id))
-      .orderBy(search.l2Distance(vectorItems.embedding, [1, 0, 0]))
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.l2Distance(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <-> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a top-k cosine vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.cosineDistance(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <=> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a top-k inner product vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.innerProduct(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <#> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a filtered vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes sneakers"))
+      .orderBy(search.l2Distance(mockItems.embedding, queryVector))
       .limit(2);
 
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <-> $1 limit $2`,
+      `select "id" from "mock_items" where "mock_items"."description" ||| $1 order by "mock_items"."embedding" <-> $2 limit $3`,
     );
-    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
+    expect(generated.params).toStrictEqual([
+      "shoes sneakers",
+      JSON.stringify(queryVector),
+      2,
+    ]);
+
+    await query;
   });
-
-  it("generates top-k cosine vector search SQL", () => {
-    const query = db
-      .select({ id: vectorItems.id })
-      .from(vectorItems)
-      .where(search.all(vectorItems.id))
-      .orderBy(search.cosineDistance(vectorItems.embedding, [1, 0, 0]))
-      .limit(2);
-
-    const generated = query.toSQL();
-
-    expect(generated.sql).toBe(
-      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <=> $1 limit $2`,
-    );
-    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
-  });
-
-  it("generates top-k inner product vector search SQL", () => {
-    const query = db
-      .select({ id: vectorItems.id })
-      .from(vectorItems)
-      .where(search.all(vectorItems.id))
-      .orderBy(search.innerProduct(vectorItems.embedding, [1, 0, 0]))
-      .limit(2);
-
-    const generated = query.toSQL();
-
-    expect(generated.sql).toBe(
-      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <#> $1 limit $2`,
-    );
-    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
-  });
-
-  it.skipIf(!vectorSearchSupported)(
-    "runs a top-k vector search (requires pg_search vector support)",
-    async () => {
-      const rows = await db
-        .select({ id: vectorItems.id })
-        .from(vectorItems)
-        .where(search.all(vectorItems.id))
-        .orderBy(search.l2Distance(vectorItems.embedding, [1, 0, 0]))
-        .limit(2);
-
-      expect(rows.map((row) => row.id)).toStrictEqual([1, 2]);
-    },
-  );
-
-  it.skipIf(!vectorSearchSupported)(
-    "runs a filtered vector search (requires pg_search vector support)",
-    async () => {
-      const rows = await db
-        .select({ id: vectorItems.id })
-        .from(vectorItems)
-        .where(search.matchAny(vectorItems.description, "shoes sneakers"))
-        .orderBy(search.l2Distance(vectorItems.embedding, [0, 0, 1]))
-        .limit(2);
-
-      expect(rows.map((row) => row.id)).toStrictEqual([2, 1]);
-    },
-  );
 });

@@ -36,68 +36,17 @@
 
 # ParadeDB for Drizzle
 
-The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
+The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. The integration covers both full-text and [vector search](https://docs.paradedb.com/documentation/vector/overview): ParadeDB indexes can index [pgvector](https://github.com/pgvector/pgvector) `vector` columns for Top-K retrieval. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
 
 ## Requirements & Compatibility
 
-| Component  | Supported                     |
-| ---------- | ----------------------------- |
-| Node       | 22.12+                        |
-| Drizzle    | 1.0+                          |
-| ParadeDB   | 0.25.0+                       |
-| PostgreSQL | 15+ (with ParadeDB extension) |
-
-## Vector Search
-
-ParadeDB can index [pgvector](https://github.com/pgvector/pgvector) `vector` columns directly inside a ParadeDB index. Declare the column with Drizzle's `vector` type (re-exported by this package), pick a distance metric for the index, and query with the matching distance operator:
-
-```ts
-import { pgTable, integer, text } from "drizzle-orm/pg-core";
-import { indexing, search } from "@paradedb/drizzle-paradedb";
-
-const items = pgTable(
-  "items",
-  {
-    id: integer("id").primaryKey(),
-    description: text("description").notNull(),
-    embedding: indexing.vector("embedding", { dimensions: 384 }),
-  },
-  (table) => [
-    indexing
-      .paradedbIndex("items_search_idx")
-      .on(
-        table.id,
-        table.description,
-        indexing.vectorField(table.embedding, "cosine"),
-      ),
-  ],
-);
-```
-
-This emits `CREATE INDEX ... USING paradedb ("id", "description", "embedding" vector_cosine_ops) WITH (key_field=id)`.
-
-Top-K nearest-neighbor queries need two things to be served by the index: a `@@@` predicate (use `search.all` to match every row) and a `LIMIT`:
-
-```ts
-const results = await db
-  .select({ id: items.id, description: items.description })
-  .from(items)
-  .where(search.all(items.id))
-  .orderBy(search.cosineDistance(items.embedding, queryEmbedding))
-  .limit(10);
-```
-
-Replace `search.all` with any other predicate (e.g. `search.matchAll`) to filter candidates before ranking by distance.
-
-The `ORDER BY` distance function must match the metric the index was built with, otherwise the query still returns correct results but falls back to a plain sort instead of Top-K index pushdown:
-
-| Metric (`vectorField`) | Operator class      | Distance function       | Operator |
-| ---------------------- | ------------------- | ----------------------- | -------- |
-| `"l2"` (default)       | `vector_l2_ops`     | `search.l2Distance`     | `<->`    |
-| `"cosine"`             | `vector_cosine_ops` | `search.cosineDistance` | `<=>`    |
-| `"ip"`                 | `vector_ip_ops`     | `search.innerProduct`   | `<#>`    |
-
-Vector fields in ParadeDB indexes require a pg_search version newer than 0.24; on older versions index creation fails and the [vector search example](examples/vector-search.ts) and tests skip themselves.
+| Component  | Supported                                                         |
+| ---------- | ----------------------------------------------------------------- |
+| Node       | 22.12+                                                            |
+| Drizzle    | 1.0+                                                              |
+| ParadeDB   | 0.25.0+                                                           |
+| PostgreSQL | 15+ (with ParadeDB extension)                                     |
+| pgvector   | Required for vector search; included in the ParadeDB Docker image |
 
 ## Examples
 
@@ -115,11 +64,11 @@ pnpm examples autocomplete.ts
 
 - [Quickstart](examples/quickstart.ts)
 - [Faceted search](examples/faceted-search.ts)
+- [Vector search](examples/vector-search.ts)
+- [Hybrid RRF](examples/hybrid-rrf.ts)
+- [RAG](examples/rag.ts)
 - [Autocomplete](examples/autocomplete.ts)
 - [More Like This](examples/more-like-this.ts)
-- [Hybrid RRF](examples/hybrid-rrf.ts)
-- [Vector search](examples/vector-search.ts)
-- [RAG](examples/rag.ts)
 
 ## Contributing
 

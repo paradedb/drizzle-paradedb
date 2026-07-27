@@ -1,17 +1,37 @@
-import { desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import { closeDb, db, mockItems, setupMockItems } from "./common.js";
 import { search } from "../src/index.js";
 
 const model = process.env.RAG_MODEL ?? "anthropic/claude-3-haiku";
 
-type RetrievedItem = typeof mockItems.$inferSelect & { score: number };
+type RetrievedItem = Omit<typeof mockItems.$inferSelect, "embedding"> & {
+  distance: number;
+};
+
+// In production, compute query embeddings with the same model that produced
+// the stored embeddings. These fixed vectors stand in for that model.
+const questions: { question: string; embedding: number[] }[] = [
+  {
+    question: "What running shoes do you have?",
+    embedding: [-0.02, 0.47, -0.76, 0.13, 0.34, 0.04, 0.19, -0.19],
+  },
+  {
+    question: "I need comfortable shoes for everyday use",
+    embedding: [-0.04, 0.4, -0.66, -0.07, 0.43, 0.21, 0.39, -0.1],
+  },
+  {
+    question: "Do you have any wireless audio products?",
+    embedding: [-0.08, 0.19, -0.88, 0.16, 0.3, 0.03, -0.08, -0.23],
+  },
+];
 
 export async function runRag(): Promise<void> {
   console.log("=".repeat(60));
   console.log("RAG with drizzle-paradedb + OpenRouter");
   console.log("=".repeat(60));
   console.log(`Using model: ${model}`);
+  console.log("\nRetrieval: keyword filter + Top-K by vector distance.");
   if (!process.env.OPENROUTER_API_KEY) {
     console.log(
       "OPENROUTER_API_KEY is not set; generation responses will be skipped.",
@@ -20,15 +40,21 @@ export async function runRag(): Promise<void> {
 
   await setupMockItems();
 
-  await rag("What running shoes do you have?");
-  await rag("I need comfortable shoes for everyday use");
-  await rag("Do you have any wireless audio products?");
+  for (const { question, embedding } of questions) {
+    await rag(question, embedding);
+  }
 
   console.log("\n" + "=".repeat(60));
   console.log("Done!");
 }
 
-async function retrieve(query: string, topK = 5): Promise<RetrievedItem[]> {
+async function retrieve(
+  query: string,
+  queryEmbedding: number[],
+  topK = 5,
+): Promise<RetrievedItem[]> {
+  const distance = search.cosineDistance(mockItems.embedding, queryEmbedding);
+
   return db
     .select({
       id: mockItems.id,
@@ -38,11 +64,11 @@ async function retrieve(query: string, topK = 5): Promise<RetrievedItem[]> {
       inStock: mockItems.inStock,
       createdAt: mockItems.createdAt,
       metadata: mockItems.metadata,
-      score: search.score(mockItems.id),
+      distance: sql<number>`(${distance})::float8`,
     })
     .from(mockItems)
     .where(search.parse(mockItems.id, query, { lenient: true }))
-    .orderBy(desc(search.score(mockItems.id)))
+    .orderBy(distance)
     .limit(topK);
 }
 
@@ -100,15 +126,17 @@ Provide a helpful, concise answer. If the products don't match what the customer
   }
 }
 
-async function rag(query: string): Promise<void> {
+async function rag(query: string, queryEmbedding: number[]): Promise<void> {
   console.log("\n" + "=".repeat(60));
   console.log(`Question: ${query}`);
   console.log("=".repeat(60));
 
-  const items = await retrieve(query);
+  const items = await retrieve(query, queryEmbedding);
   console.log(`\nRetrieved ${items.length} products:`);
   for (const item of items) {
-    console.log(`  - ${item.description} (score: ${item.score.toFixed(2)})`);
+    console.log(
+      `  - ${item.description} (distance: ${item.distance.toFixed(4)})`,
+    );
   }
 
   console.log("\nAnswer:");
