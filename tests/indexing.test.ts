@@ -12,7 +12,9 @@ import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { tokenizer, search, indexing } from "../src/index.js";
-import { client, db } from "./db.js";
+import { client, db, supportsVectorSearch } from "./db.js";
+
+const vectorSearchSupported = await supportsVectorSearch();
 
 afterAll(async () => {
   await client.end();
@@ -131,6 +133,21 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
+  it("generates vector field index SQL with opclasses", async () => {
+    const statements = await generateVectorIndexStatements();
+
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id);`,
+    );
+  });
+
+  it.skipIf(!vectorSearchSupported)(
+    "runs vector field index SQL (requires pg_search vector support)",
+    async () => {
+      await runStatements(await generateVectorIndexStatements());
+    },
+  );
+
   it("applies a paradedb index with drizzle-kit push", async () => {
     const tempDir = await mkdtemp(
       join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
@@ -224,6 +241,34 @@ export default defineConfig({
     }
   }, 60_000);
 });
+
+async function generateVectorIndexStatements(): Promise<string[]> {
+  const products = pgTable(
+    "indexing_test_products",
+    {
+      id: integer("id").primaryKey(),
+      description: text("description"),
+      embedding: indexing.vector("embedding", { dimensions: 3 }),
+      embeddingCosine: indexing.vector("embedding_cosine", { dimensions: 3 }),
+      embeddingIp: indexing.vector("embedding_ip", { dimensions: 3 }),
+    },
+    (table) => [
+      indexing
+        .paradedbIndex("indexing_test_products_bm25_idx")
+        .on(
+          table.id,
+          indexing.paradedbField(table.description, tokenizer.simple()),
+          indexing.vectorField(table.embedding),
+          indexing.vectorField(table.embeddingCosine, "cosine"),
+          indexing.vectorField(table.embeddingIp, "ip"),
+        ),
+    ],
+  );
+
+  const prev = await generateDrizzleJson({});
+  const cur = await generateDrizzleJson({ products });
+  return generateMigration(prev, cur);
+}
 
 async function runStatements(statements: string[]) {
   await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));

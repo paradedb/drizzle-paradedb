@@ -7,6 +7,7 @@ examples=(
   more-like-this.ts
   faceted-search.ts
   hybrid-rrf.ts
+  vector-search.ts
   rag.ts
 )
 

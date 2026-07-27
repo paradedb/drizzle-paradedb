@@ -1,6 +1,8 @@
 import { AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
 import { Tokenizer, renderTokenizer } from "./tokenizer.js";
 
+export { cosineDistance, innerProduct, l2Distance } from "drizzle-orm";
+
 type SearchValue = string | string[] | SQLWrapper;
 
 export function boost(value: SearchValue, factor: number): SQL {

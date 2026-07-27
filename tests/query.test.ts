@@ -1,9 +1,9 @@
 import { and, desc, sql } from "drizzle-orm";
-import { pgTable, serial, text } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { search, tokenizer } from "../src/index.js";
-import { client, db } from "./db.js";
+import { indexing, search, tokenizer } from "../src/index.js";
+import { client, db, supportsVectorSearch } from "./db.js";
 import { mockItems } from "./mock-items.js";
 import {
   MoreLikeThisDocumentOptions,
@@ -14,6 +14,14 @@ const mockItemsWithSerialId = pgTable("mock_items", {
   id: serial("id").primaryKey(),
   description: text("description"),
 });
+
+const vectorItems = pgTable("vector_search_items", {
+  id: integer("id").primaryKey(),
+  description: text("description"),
+  embedding: indexing.vector("embedding", { dimensions: 3 }),
+});
+
+const vectorSearchSupported = await supportsVectorSearch();
 
 beforeAll(async () => {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
@@ -1220,4 +1228,111 @@ describe("ParadeDB query language", () => {
     });
     expect(result).toBe(`pdb.mytokenizer(true,false,'someBool=true')`);
   });
+});
+
+describe("vector search", () => {
+  beforeAll(async () => {
+    if (!vectorSearchSupported) return;
+
+    await db.execute(sql`DROP TABLE IF EXISTS vector_search_items`);
+    await db.execute(sql`
+      CREATE TABLE vector_search_items (
+        id integer PRIMARY KEY,
+        description text,
+        embedding vector(3)
+      )
+    `);
+    await db.execute(sql`
+      INSERT INTO vector_search_items VALUES
+        (1, 'red running shoes', '[1,0,0]'),
+        (2, 'blue sneakers', '[0.9,0.1,0]'),
+        (3, 'green hat', '[0,0,1]')
+    `);
+    await db.execute(sql`
+      CREATE INDEX vector_search_items_idx ON vector_search_items
+      USING paradedb (id, description, embedding vector_l2_ops)
+      WITH (key_field='id')
+    `);
+  });
+
+  afterAll(async () => {
+    if (!vectorSearchSupported) return;
+    await db.execute(sql`DROP TABLE IF EXISTS vector_search_items`);
+  });
+
+  it("generates top-k l2 vector search SQL", () => {
+    const query = db
+      .select({ id: vectorItems.id })
+      .from(vectorItems)
+      .where(search.all(vectorItems.id))
+      .orderBy(search.l2Distance(vectorItems.embedding, [1, 0, 0]))
+      .limit(2);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <-> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
+  });
+
+  it("generates top-k cosine vector search SQL", () => {
+    const query = db
+      .select({ id: vectorItems.id })
+      .from(vectorItems)
+      .where(search.all(vectorItems.id))
+      .orderBy(search.cosineDistance(vectorItems.embedding, [1, 0, 0]))
+      .limit(2);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <=> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
+  });
+
+  it("generates top-k inner product vector search SQL", () => {
+    const query = db
+      .select({ id: vectorItems.id })
+      .from(vectorItems)
+      .where(search.all(vectorItems.id))
+      .orderBy(search.innerProduct(vectorItems.embedding, [1, 0, 0]))
+      .limit(2);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "vector_search_items" where "vector_search_items"."id" @@@ pdb.all() order by "vector_search_items"."embedding" <#> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual(["[1,0,0]", 2]);
+  });
+
+  it.skipIf(!vectorSearchSupported)(
+    "runs a top-k vector search (requires pg_search vector support)",
+    async () => {
+      const rows = await db
+        .select({ id: vectorItems.id })
+        .from(vectorItems)
+        .where(search.all(vectorItems.id))
+        .orderBy(search.l2Distance(vectorItems.embedding, [1, 0, 0]))
+        .limit(2);
+
+      expect(rows.map((row) => row.id)).toStrictEqual([1, 2]);
+    },
+  );
+
+  it.skipIf(!vectorSearchSupported)(
+    "runs a filtered vector search (requires pg_search vector support)",
+    async () => {
+      const rows = await db
+        .select({ id: vectorItems.id })
+        .from(vectorItems)
+        .where(search.matchAny(vectorItems.description, "shoes sneakers"))
+        .orderBy(search.l2Distance(vectorItems.embedding, [0, 0, 1]))
+        .limit(2);
+
+      expect(rows.map((row) => row.id)).toStrictEqual([2, 1]);
+    },
+  );
 });
