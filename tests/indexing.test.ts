@@ -19,7 +19,7 @@ afterAll(async () => {
 });
 
 describe("ParadeDB indexing helpers", () => {
-  it("generates and runs bm25 index SQL", async () => {
+  it("generates and runs paradedb index SQL", async () => {
     const products = pgTable(
       "indexing_test_products",
       {
@@ -30,14 +30,14 @@ describe("ParadeDB indexing helpers", () => {
       },
       (table) => [
         indexing
-          .bm25Index("indexing_test_products_bm25_idx")
+          .paradedbIndex("indexing_test_products_idx")
           .on(
             table.id,
-            indexing.bm25Field(
+            indexing.paradedbField(
               table.description,
               tokenizer.ngram(3, 3, { positions: true }),
             ),
-            indexing.bm25Field(
+            indexing.paradedbField(
               indexing.jsonText(table.metadata, "color"),
               tokenizer.literal({ alias: "metadata_color" }),
             ),
@@ -52,7 +52,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id",(("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WITH (key_field=id) WHERE "rating" > 0;`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WITH (key_field=id) WHERE "rating" > 0;`,
     );
 
     await runStatements(statements);
@@ -70,19 +70,19 @@ describe("ParadeDB indexing helpers", () => {
       },
       (table) => [
         indexing
-          .bm25Index("indexing_test_products_bm25_idx", {
+          .paradedbIndex("indexing_test_products_idx", {
             searchTokenizer: tokenizer.simple({ lowercase: false }),
           })
           .on(
             table.id,
             table.categories,
-            indexing.bm25Field(table.tags, tokenizer.literal()),
-            indexing.bm25Field(
+            indexing.paradedbField(table.tags, tokenizer.literal()),
+            indexing.paradedbField(
               sql`${table.description} || ' ' || ${table.category}`,
               tokenizer.simple({ alias: "description_concat" }),
             ),
-            indexing.bm25Field(table.description, tokenizer.literal()),
-            indexing.bm25Field(
+            indexing.paradedbField(table.description, tokenizer.literal()),
+            indexing.paradedbField(
               table.description,
               tokenizer.simple({ alias: "description_simple" }),
             ),
@@ -96,7 +96,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX CONCURRENTLY "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (key_field=id, search_tokenizer='simple(lowercase=false)');`,
+      `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (key_field=id, search_tokenizer='simple(lowercase=false)');`,
     );
 
     await runStatements(statements);
@@ -113,7 +113,7 @@ describe("ParadeDB indexing helpers", () => {
       },
       (table) => [
         indexing
-          .bm25Index("indexing_test_products_bm25_idx", {
+          .paradedbIndex("indexing_test_products_idx", {
             searchTokenizer: tokenizer.simple(),
           })
           .on(table.id, table.categories),
@@ -125,15 +125,15 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_bm25_idx" ON "indexing_test_products" USING bm25 ("id","categories") WITH (key_field=id, search_tokenizer='simple');`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories") WITH (key_field=id, search_tokenizer='simple');`,
     );
 
     await runStatements(statements);
   });
 
-  it("applies a bm25 index with drizzle-kit push", async () => {
+  it("applies a paradedb index with drizzle-kit push", async () => {
     const tempDir = await mkdtemp(
-      join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-bm25-"),
+      join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
     );
 
     await writeFile(
@@ -141,14 +141,14 @@ describe("ParadeDB indexing helpers", () => {
       `import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { indexing, tokenizer } from "../../src/index";
 
-export const products = pgTable("drizzle_kit_bm25_products", {
+export const products = pgTable("drizzle_kit_products", {
   id: integer("id").primaryKey(),
   description: text("description"),
   category: text("category"),
 }, (table) => [
-  indexing.bm25Index("drizzle_kit_bm25_products_bm25_idx").on(
+  indexing.paradedbIndex("drizzle_kit_products_idx").on(
     table.id,
-    indexing.bm25Field(table.description, tokenizer.simple()),
+    indexing.paradedbField(table.description, tokenizer.simple()),
     table.category,
   ),
 ]);
@@ -166,12 +166,12 @@ export default defineConfig({
     url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/postgres",
   },
   schemaFilter: "public",
-  tablesFilter: "drizzle_kit_bm25_products",
+  tablesFilter: "drizzle_kit_products",
 });
 `,
     );
 
-    await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_bm25_products"));
+    await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
 
     try {
       await promisify(execFile)(
@@ -196,32 +196,30 @@ export default defineConfig({
           SELECT indexdef
           FROM pg_indexes
           WHERE schemaname = 'public'
-            AND tablename = 'drizzle_kit_bm25_products'
-            AND indexname = 'drizzle_kit_bm25_products_bm25_idx'
+            AND tablename = 'drizzle_kit_products'
+            AND indexname = 'drizzle_kit_products_idx'
         `;
 
       expect(indexes.map((row) => row.indexdef)).toStrictEqual([
-        "CREATE INDEX drizzle_kit_bm25_products_bm25_idx ON public.drizzle_kit_bm25_products USING bm25 (id, ((description)::pdb.simple), category) WITH (key_field=id)",
+        "CREATE INDEX drizzle_kit_products_idx ON public.drizzle_kit_products USING paradedb (id, ((description)::pdb.simple), category) WITH (key_field=id)",
       ]);
 
       await db.execute(
         sql.raw(`
-          INSERT INTO drizzle_kit_bm25_products (id, description, category)
+          INSERT INTO drizzle_kit_products (id, description, category)
           VALUES (1, 'comfortable running shoes', 'footwear')
         `),
       );
 
       const results = await client`
           SELECT id
-          FROM drizzle_kit_bm25_products
+          FROM drizzle_kit_products
           WHERE description &&& 'running'
         `;
 
       expect(results.map((row) => row.id)).toStrictEqual([1]);
     } finally {
-      await db.execute(
-        sql.raw("DROP TABLE IF EXISTS drizzle_kit_bm25_products"),
-      );
+      await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
       await rm(tempDir, { recursive: true, force: true });
     }
   }, 60_000);

@@ -1,6 +1,5 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
-import { readFile } from "node:fs/promises";
 
 import { closeDb, db, mockItems, setupMockItems } from "./common.js";
 import { search } from "../src/index.js";
@@ -11,6 +10,23 @@ type HybridRow = {
   rrfScore: number;
 };
 
+// In production, compute query embeddings with the same model that produced
+// the stored embeddings. These fixed vectors stand in for that model.
+const demos: { query: string; embedding: number[] }[] = [
+  {
+    query: "running shoes",
+    embedding: [-0.02, 0.47, -0.76, 0.13, 0.34, 0.04, 0.19, -0.19],
+  },
+  {
+    query: "footwear for exercise",
+    embedding: [-0.04, 0.4, -0.66, -0.07, 0.43, 0.21, 0.39, -0.1],
+  },
+  {
+    query: "wireless earbuds",
+    embedding: [-0.08, 0.19, -0.88, 0.16, 0.3, 0.03, -0.08, -0.23],
+  },
+];
+
 export async function runHybridRrf(): Promise<void> {
   console.log("=".repeat(60));
   console.log("Hybrid Search with Reciprocal Rank Fusion (RRF)");
@@ -18,69 +34,19 @@ export async function runHybridRrf(): Promise<void> {
   console.log("\nSingle-query CTE: BM25 (keyword) + Vector (semantic)");
   console.log("RRF formula: score = sum(1 / (k + rank)) across all rankings");
 
-  try {
-    await setupHybridItems();
-  } catch (error) {
-    console.log(`\nSkipped: pgvector setup failed (${String(error)})`);
-    return;
-  }
+  await setupMockItems();
 
-  await demo("running shoes");
-  await demo("footwear for exercise");
-  await demo("wireless earbuds");
+  for (const { query, embedding } of demos) {
+    await demo(query, embedding);
+  }
 
   console.log("\n" + "=".repeat(70));
   console.log("All results produced by a single SQL query per search.");
   console.log("=".repeat(70));
 }
 
-async function setupHybridItems(): Promise<void> {
-  await setupMockItems();
-  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
-  await db.execute(
-    sql`ALTER TABLE mock_items ADD COLUMN IF NOT EXISTS embedding vector(384)`,
-  );
-
-  const [existing] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(mockItems)
-    .where(sql`embedding IS NOT NULL`);
-  if (existing.count > 0) {
-    console.log(`✓ ${existing.count} items already have embeddings`);
-    return;
-  }
-
-  const rows = await loadEmbeddings();
-  for (const row of rows) {
-    await db.execute(sql`
-      UPDATE mock_items
-      SET embedding = ${row.embedding}::vector
-      WHERE id = ${row.id}
-    `);
-  }
-  console.log(`✓ Loaded ${rows.length} embeddings`);
-}
-
-async function loadEmbeddings(): Promise<{ id: number; embedding: string }[]> {
-  const csv = await readFile(
-    new URL("./hybrid_rrf/mock_items_embeddings.csv", import.meta.url),
-    "utf8",
-  );
-
-  return csv
-    .trim()
-    .split("\n")
-    .slice(1)
-    .map((line) => {
-      const match = line.match(/^(\d+),.*,"(\[.*\])"$/);
-      if (!match) throw new Error(`Invalid embedding CSV row: ${line}`);
-      return { id: Number(match[1]), embedding: match[2] };
-    });
-}
-
-async function demo(query: string): Promise<void> {
-  const queryEmbedding = await getQueryEmbedding(query);
-  const results = await hybridSearch(query, queryEmbedding);
+async function demo(query: string, embedding: number[]): Promise<void> {
+  const results = await hybridSearch(query, embedding);
 
   console.log("\n" + "=".repeat(70));
   console.log(`Query: '${query}'`);
@@ -93,30 +59,14 @@ async function demo(query: string): Promise<void> {
   }
 }
 
-async function getQueryEmbedding(query: string): Promise<string> {
-  const sourceIds: Record<string, number> = {
-    "running shoes": 3,
-    "footwear for exercise": 3,
-    "wireless earbuds": 12,
-  };
-  const [row] = await db
-    .select({ embedding: sql<string>`embedding::text` })
-    .from(mockItems)
-    .where(eq(mockItems.id, sourceIds[query]))
-    .limit(1);
-
-  if (!row?.embedding) throw new Error(`No embedding found for '${query}'`);
-  return row.embedding;
-}
-
 async function hybridSearch(
   query: string,
-  queryEmbedding: string,
+  queryEmbedding: number[],
   topK = 20,
   rrfK = 60,
   limit = 5,
 ): Promise<HybridRow[]> {
-  const vectorDistance = sql`embedding <=> ${queryEmbedding}::vector`;
+  const vectorDistance = sql`embedding <=> ${JSON.stringify(queryEmbedding)}::vector`;
   const fulltext = db.$with("fulltext").as(
     db
       .select({
@@ -139,7 +89,6 @@ async function hybridSearch(
         ),
       })
       .from(mockItems)
-      .where(sql`embedding IS NOT NULL`)
       .orderBy(vectorDistance)
       .limit(topK),
   );

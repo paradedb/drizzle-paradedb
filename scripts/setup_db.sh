@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PARADEDB_VERSION="${PARADEDB_VERSION:-0.24.2}"
+PARADEDB_VERSION="${PARADEDB_VERSION:-0.25.0}"
 PARADEDB_POSTGRES_VERSION="${PARADEDB_POSTGRES_VERSION:-18}"
 IMAGE="${PARADEDB_IMAGE:-paradedb/paradedb:${PARADEDB_VERSION}-pg${PARADEDB_POSTGRES_VERSION}}"
 CONTAINER_NAME="${PARADEDB_CONTAINER_NAME:-drizzle-paradedb}"
@@ -31,15 +31,18 @@ else
   docker start "$CONTAINER_NAME" >/dev/null
 fi
 
+# Check readiness over TCP: during first-time initialization the image runs a
+# temporary socket-only server that seeds extensions and sample data, and it
+# must not be mistaken for the real one.
 echo "Waiting for ParadeDB to become ready..."
 for _ in {1..30}; do
-  if docker exec "$CONTAINER_NAME" pg_isready -U "$USER" -d "$DB" >/dev/null 2>&1; then
+  if docker exec "$CONTAINER_NAME" pg_isready -h 127.0.0.1 -U "$USER" -d "$DB" >/dev/null 2>&1; then
     break
   fi
   sleep 5
 done
 
-if ! docker exec "$CONTAINER_NAME" pg_isready -U "$USER" -d "$DB" >/dev/null 2>&1; then
+if ! docker exec "$CONTAINER_NAME" pg_isready -h 127.0.0.1 -U "$USER" -d "$DB" >/dev/null 2>&1; then
   echo "ParadeDB did not become ready in time" >&2
   exit 1
 fi

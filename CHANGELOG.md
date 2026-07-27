@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+### Changed
+
+- **Breaking**: `bm25Index`, `bm25Field`, and `Bm25IndexOptions` are renamed to `paradedbIndex`, `paradedbField`, and `ParadedbIndexOptions`, and indexes are always created with `USING paradedb`, which requires pg_search 0.25.0+ ([paradedb/paradedb#5706](https://github.com/paradedb/paradedb/issues/5706)).
+
 ## [0.2.0] - 2025-07-14
 
 ### Changed
