@@ -8,13 +8,13 @@ import {
 
 type IndexField = PgColumn | SQL;
 
-type Bm25IndexOptions = {
+export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
 };
 
-export function bm25Index(
+export function paradedbIndex(
   name?: string,
-  options: Bm25IndexOptions = {},
+  options: ParadedbIndexOptions = {},
 ): {
   on(keyField: PgColumn, ...fields: IndexField[]): IndexBuilder;
 } {
@@ -28,13 +28,13 @@ export function bm25Index(
       }
 
       return index(name)
-        .using("bm25", keyField, ...fields)
+        .using("paradedb", keyField, ...fields)
         .with(withOptions);
     },
   };
 }
 
-export function bm25Field(field: SQLWrapper, tokenizer: Tokenizer): SQL {
+export function paradedbField(field: SQLWrapper, tokenizer: Tokenizer): SQL {
   return sql`((${field})::${sql.raw(renderTokenizer(tokenizer))})`;
 }
 

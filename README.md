@@ -36,7 +36,7 @@
 
 # ParadeDB for Drizzle
 
-The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing BM25 indexes and running queries using the full ParadeDB API. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
+The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
 
 ## Requirements & Compatibility
 
@@ -44,7 +44,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 | ---------- | ----------------------------- |
 | Node       | 22.12+                        |
 | Drizzle    | 1.0+                          |
-| ParadeDB   | 0.22.0+                       |
+| ParadeDB   | 0.25.0+                       |
 | PostgreSQL | 15+ (with ParadeDB extension) |
 
 ## Examples

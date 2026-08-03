@@ -33,11 +33,11 @@ export const mockItems = pgTable(
   },
   (table) => [
     indexing
-      .bm25Index("search_idx")
+      .paradedbIndex("search_idx")
       .on(
         table.id,
         table.description,
-        indexing.bm25Field(table.category, tokenizer.literal()),
+        indexing.paradedbField(table.category, tokenizer.literal()),
         table.rating,
         table.inStock,
         table.createdAt,
@@ -58,20 +58,21 @@ export const autocompleteItems = pgTable(
   },
   (table) => [
     indexing
-      .bm25Index("search_idx")
+      .paradedbIndex("search_idx")
       .on(
         table.id,
         table.description,
-        indexing.bm25Field(
+        indexing.paradedbField(
           table.description,
           tokenizer.ngram(3, 8, { alias: "description_ngram" }),
         ),
-        indexing.bm25Field(table.category, tokenizer.literal()),
+        indexing.paradedbField(table.category, tokenizer.literal()),
       ),
   ],
 );
 
 export async function setupMockItems(): Promise<void> {
+  await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
   await db.execute(sql`
     CALL paradedb.create_bm25_test_table(
       schema_name => 'public',
@@ -81,7 +82,7 @@ export async function setupMockItems(): Promise<void> {
   await db.execute(sql`DROP INDEX IF EXISTS search_idx`);
   await db.execute(sql`
     CREATE INDEX search_idx ON mock_items
-    USING bm25 (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata, weight_range, last_updated_date, latest_available_time)
+    USING paradedb (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata, weight_range, last_updated_date, latest_available_time)
     WITH (key_field='id', json_fields='{"metadata":{"fast":true}}')
   `);
 }
@@ -108,7 +109,7 @@ export async function setupAutocompleteItems(): Promise<void> {
   await db.execute(sql`DROP INDEX IF EXISTS search_idx`);
   await db.execute(sql`
     CREATE INDEX search_idx ON autocomplete_items
-    USING bm25 (id, description, ((description)::pdb.ngram(3,8,'alias=description_ngram')), ((category)::pdb.literal))
+    USING paradedb (id, description, ((description)::pdb.ngram(3,8,'alias=description_ngram')), ((category)::pdb.literal))
     WITH (key_field='id')
   `);
 }

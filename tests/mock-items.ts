@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { bm25Field, bm25Index } from "../src/indexing.js";
+import { paradedbField, paradedbIndex } from "../src/indexing.js";
 import * as tokenizer from "../src/tokenizer.js";
 
 const int4range = customType<{ data: string; driverData: string }>({
@@ -35,10 +35,13 @@ export const mockItems = pgTable(
     weightRange: int4range("weight_range"),
   },
   (table) => [
-    bm25Index("mock_items_search_idx").on(
+    paradedbIndex("mock_items_search_idx").on(
       table.id,
-      bm25Field(table.description, tokenizer.simple({ stemmer: "english" })),
-      bm25Field(table.category, tokenizer.literal()),
+      paradedbField(
+        table.description,
+        tokenizer.simple({ stemmer: "english" }),
+      ),
+      paradedbField(table.category, tokenizer.literal()),
       table.rating,
       table.inStock,
       table.metadata,
