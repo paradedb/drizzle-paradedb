@@ -3,11 +3,12 @@ set -euo pipefail
 
 examples=(
   quickstart.ts
-  autocomplete.ts
-  more-like-this.ts
   faceted-search.ts
+  vector-search.ts
   hybrid-rrf.ts
   rag.ts
+  autocomplete.ts
+  more-like-this.ts
 )
 
 if [ "$#" -gt 0 ]; then

@@ -30,6 +30,7 @@ export const mockItems = pgTable(
     inStock: boolean("in_stock").notNull(),
     createdAt: timestamp("created_at").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+    embedding: indexing.vector("embedding", { dimensions: 8 }),
   },
   (table) => [
     indexing
@@ -42,6 +43,7 @@ export const mockItems = pgTable(
         table.inStock,
         table.createdAt,
         table.metadata,
+        indexing.vectorField(table.embedding, "cosine"),
       ),
   ],
 );
@@ -82,7 +84,7 @@ export async function setupMockItems(): Promise<void> {
   await db.execute(sql`DROP INDEX IF EXISTS search_idx`);
   await db.execute(sql`
     CREATE INDEX search_idx ON mock_items
-    USING paradedb (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata, weight_range, last_updated_date, latest_available_time)
+    USING paradedb (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata, weight_range, last_updated_date, latest_available_time, embedding vector_cosine_ops)
     WITH (key_field='id', json_fields='{"metadata":{"fast":true}}')
   `);
 }

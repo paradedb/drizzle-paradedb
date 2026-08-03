@@ -36,16 +36,17 @@
 
 # ParadeDB for Drizzle
 
-The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
+The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. The integration covers both full-text and [vector search](https://docs.paradedb.com/documentation/vector/overview): ParadeDB indexes can index [pgvector](https://github.com/pgvector/pgvector) `vector` columns for Top-K retrieval. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
 
 ## Requirements & Compatibility
 
-| Component  | Supported                     |
-| ---------- | ----------------------------- |
-| Node       | 22.12+                        |
-| Drizzle    | 1.0+                          |
-| ParadeDB   | 0.25.0+                       |
-| PostgreSQL | 15+ (with ParadeDB extension) |
+| Component  | Supported                                                         |
+| ---------- | ----------------------------------------------------------------- |
+| Node       | 22.12+                                                            |
+| Drizzle    | 1.0+                                                              |
+| ParadeDB   | 0.25.0+                                                           |
+| PostgreSQL | 15+ (with ParadeDB extension)                                     |
+| pgvector   | Required for vector search; included in the ParadeDB Docker image |
 
 ## Examples
 
@@ -63,10 +64,11 @@ pnpm examples autocomplete.ts
 
 - [Quickstart](examples/quickstart.ts)
 - [Faceted search](examples/faceted-search.ts)
-- [Autocomplete](examples/autocomplete.ts)
-- [More Like This](examples/more-like-this.ts)
+- [Vector search](examples/vector-search.ts)
 - [Hybrid RRF](examples/hybrid-rrf.ts)
 - [RAG](examples/rag.ts)
+- [Autocomplete](examples/autocomplete.ts)
+- [More Like This](examples/more-like-this.ts)
 
 ## Contributing
 

@@ -66,7 +66,10 @@ async function hybridSearch(
   rrfK = 60,
   limit = 5,
 ): Promise<HybridRow[]> {
-  const vectorDistance = sql`embedding <=> ${JSON.stringify(queryEmbedding)}::vector`;
+  const vectorDistance = search.cosineDistance(
+    mockItems.embedding,
+    queryEmbedding,
+  );
   const fulltext = db.$with("fulltext").as(
     db
       .select({

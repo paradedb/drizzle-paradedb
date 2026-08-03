@@ -131,6 +131,16 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
+  it("generates and runs vector field index SQL with opclasses", async () => {
+    const statements = await generateVectorIndexStatements();
+
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id);`,
+    );
+
+    await runStatements(statements);
+  });
+
   it("applies a paradedb index with drizzle-kit push", async () => {
     const tempDir = await mkdtemp(
       join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
@@ -224,6 +234,34 @@ export default defineConfig({
     }
   }, 60_000);
 });
+
+async function generateVectorIndexStatements(): Promise<string[]> {
+  const products = pgTable(
+    "indexing_test_products",
+    {
+      id: integer("id").primaryKey(),
+      description: text("description"),
+      embedding: indexing.vector("embedding", { dimensions: 3 }),
+      embeddingCosine: indexing.vector("embedding_cosine", { dimensions: 3 }),
+      embeddingIp: indexing.vector("embedding_ip", { dimensions: 3 }),
+    },
+    (table) => [
+      indexing
+        .paradedbIndex("indexing_test_products_idx")
+        .on(
+          table.id,
+          indexing.paradedbField(table.description, tokenizer.simple()),
+          indexing.vectorField(table.embedding),
+          indexing.vectorField(table.embeddingCosine, "cosine"),
+          indexing.vectorField(table.embeddingIp, "ip"),
+        ),
+    ],
+  );
+
+  const prev = await generateDrizzleJson({});
+  const cur = await generateDrizzleJson({ products });
+  return generateMigration(prev, cur);
+}
 
 async function runStatements(statements: string[]) {
   await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));

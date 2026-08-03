@@ -1221,3 +1221,83 @@ describe("ParadeDB query language", () => {
     expect(result).toBe(`pdb.mytokenizer(true,false,'someBool=true')`);
   });
 });
+
+describe("vector search", () => {
+  const queryVector = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  it("runs a top-k l2 vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.l2Distance(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <-> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a top-k cosine vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.cosineDistance(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <=> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a top-k inner product vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.all(mockItems.id))
+      .orderBy(search.innerProduct(mockItems.embedding, queryVector))
+      .limit(5);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <#> $1 limit $2`,
+    );
+    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+
+    await query;
+  });
+
+  it("runs a filtered vector search", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes sneakers"))
+      .orderBy(search.l2Distance(mockItems.embedding, queryVector))
+      .limit(2);
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id" from "mock_items" where "mock_items"."description" ||| $1 order by "mock_items"."embedding" <-> $2 limit $3`,
+    );
+    expect(generated.params).toStrictEqual([
+      "shoes sneakers",
+      JSON.stringify(queryVector),
+      2,
+    ]);
+
+    await query;
+  });
+});
