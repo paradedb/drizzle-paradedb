@@ -13,7 +13,7 @@ import {
 
 export { vector } from "drizzle-orm/pg-core";
 
-type IndexField = PgColumn | SQL | Omit<ExtraConfigColumn, "op">;
+type IndexField = PgColumn | SQL;
 
 export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
@@ -56,7 +56,7 @@ const vectorOpClasses: Record<VectorMetric, string> = {
 export function vectorField(
   column: ExtraConfigColumn,
   metric: VectorMetric = "l2",
-): Omit<ExtraConfigColumn, "op"> {
+): IndexField {
   return column.op(vectorOpClasses[metric]);
 }
 
