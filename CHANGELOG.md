@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+## [0.3.0] - 2025-08-04
+
 ### Added
 
 - Native vector search support: `vector` columns and `vectorField` opclasses in ParadeDB indexes, plus `l2Distance`/`cosineDistance`/`innerProduct` re-exports for Top-K queries ([paradedb/paradedb#5685](https://github.com/paradedb/paradedb/issues/5685)).
@@ -26,5 +28,6 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.3.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.1.0
