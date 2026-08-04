@@ -55,6 +55,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Build
+        run: pnpm build
+
       - name: Set up test database
         run: pnpm db:setup
         env:
