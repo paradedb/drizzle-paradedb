@@ -17,6 +17,9 @@ type IndexField = PgColumn | SQL;
 
 export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
+  centroidRatio?: number;
+  trainingSamplesPerCentroid?: number;
+  clusterReplication?: number;
 };
 
 export function paradedbIndex(
@@ -32,6 +35,17 @@ export function paradedbIndex(
         withOptions.search_tokenizer = quote(
           renderSearchTokenizer(options.searchTokenizer),
         );
+      }
+      if (options.centroidRatio !== undefined) {
+        withOptions.centroid_ratio = String(options.centroidRatio);
+      }
+      if (options.trainingSamplesPerCentroid !== undefined) {
+        withOptions.training_samples_per_centroid = String(
+          options.trainingSamplesPerCentroid,
+        );
+      }
+      if (options.clusterReplication !== undefined) {
+        withOptions.cluster_replication = String(options.clusterReplication);
       }
 
       return index(name)

@@ -141,6 +141,32 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
+  it("generates and runs vector index SQL with all build options", async () => {
+    const statements = await generateVectorIndexStatements({
+      centroidRatio: 0.01,
+      trainingSamplesPerCentroid: 32,
+      clusterReplication: 1,
+    });
+
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id, centroid_ratio=0.01, training_samples_per_centroid=32, cluster_replication=1);`,
+    );
+
+    await runStatements(statements);
+  });
+
+  it("generates and runs vector index SQL with a single build option", async () => {
+    const statements = await generateVectorIndexStatements({
+      centroidRatio: 0.5,
+    });
+
+    expect(statements[1]).toStrictEqual(
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id, centroid_ratio=0.5);`,
+    );
+
+    await runStatements(statements);
+  });
+
   it("applies a paradedb index with drizzle-kit push", async () => {
     const tempDir = await mkdtemp(
       join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
@@ -235,7 +261,9 @@ export default defineConfig({
   }, 60_000);
 });
 
-async function generateVectorIndexStatements(): Promise<string[]> {
+async function generateVectorIndexStatements(
+  options: indexing.ParadedbIndexOptions = {},
+): Promise<string[]> {
   const products = pgTable(
     "indexing_test_products",
     {
@@ -247,7 +275,7 @@ async function generateVectorIndexStatements(): Promise<string[]> {
     },
     (table) => [
       indexing
-        .paradedbIndex("indexing_test_products_idx")
+        .paradedbIndex("indexing_test_products_idx", options)
         .on(
           table.id,
           indexing.paradedbField(table.description, tokenizer.simple()),

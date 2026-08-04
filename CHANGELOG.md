@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+### Added
+
+- Vector index build options on `paradedbIndex`: `centroidRatio`, `trainingSamplesPerCentroid`, and `clusterReplication`, emitted as `centroid_ratio`, `training_samples_per_centroid`, and `cluster_replication` in the index `WITH` clause.
+
 ## [0.3.0] - 2025-08-04
 
 ### Added
