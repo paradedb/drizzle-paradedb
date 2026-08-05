@@ -99,3 +99,26 @@ jobs:
 
       - name: Check API coverage
         run: uv run --with json5 scripts/check_api_coverage.py
+
+  package-smoke:
+    name: Package Install Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Package install smoke test
+        run: bash scripts/smoke_package_install.sh
