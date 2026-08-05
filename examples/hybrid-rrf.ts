@@ -92,6 +92,7 @@ async function hybridSearch(
         ),
       })
       .from(mockItems)
+      .where(search.all(mockItems.id))
       .orderBy(vectorDistance)
       .limit(topK),
   );
