@@ -56,7 +56,7 @@ To run a subset of tests, pass vitest selectors:
 pnpm test tests/queries.test.ts -t "score"
 ```
 
-`pnpm db:setup` starts a ParadeDB container via Docker and exports `DATABASE_URL`. The default container name is `drizzle-paradedb` on port `5432`.
+`pnpm db:setup` starts a ParadeDB container via Docker and exports `DATABASE_URL`. The default container is `drizzle-paradedb` on port `5432`.
 
 Some integration tests require newer pg_search versions and are skipped automatically if the feature is not available.
 
