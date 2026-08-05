@@ -1,3 +1,19 @@
 node_modules
 dist
 coverage
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Agent tooling
+.claude/
