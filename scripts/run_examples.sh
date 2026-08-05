@@ -3,8 +3,8 @@ set -euo pipefail
 
 examples=(
   quickstart.ts
-  faceted-search.ts
   vector-search.ts
+  faceted-search.ts
   hybrid-rrf.ts
   rag.ts
   autocomplete.ts
