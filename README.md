@@ -53,10 +53,10 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 - [Quickstart](examples/quickstart.ts)
 - [Vector Search](examples/vector-search.ts)
 - [Faceted Search](examples/faceted-search.ts)
-- [Autocomplete](examples/autocomplete.ts)
-- [More Like This](examples/more-like-this.ts)
 - [Hybrid Search (RRF)](examples/hybrid-rrf.ts)
 - [RAG](examples/rag.ts)
+- [Autocomplete](examples/autocomplete.ts)
+- [More Like This](examples/more-like-this.ts)
 
 See [examples/README.md](examples/README.md) for setup instructions and a description of each example.
 

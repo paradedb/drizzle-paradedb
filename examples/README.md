@@ -49,22 +49,6 @@ Builds an e-commerce-style filter sidebar. Computes search results and facet cou
 pnpm examples faceted-search.ts
 ```
 
-## Autocomplete (`autocomplete.ts`)
-
-As-you-type suggestions using n-gram tokenization, which matches substrings in the middle of words — typing `wir` matches `wireless`.
-
-```bash
-pnpm examples autocomplete.ts
-```
-
-## More Like This (`more-like-this.ts`)
-
-"Related content" recommendations. Finds documents with similar keywords using TF-IDF logic, without requiring vector embeddings.
-
-```bash
-pnpm examples more-like-this.ts
-```
-
 ## Hybrid Search (RRF) (`hybrid-rrf.ts`)
 
 Combines BM25 keyword search (good for exact matches like part numbers) with vector similarity (good for meaning) using Reciprocal Rank Fusion, which ranks better than either method alone.
@@ -84,6 +68,22 @@ Requires an [OpenRouter](https://openrouter.ai/) API key:
 ```bash
 export OPENROUTER_API_KEY=sk-...
 pnpm examples rag.ts
+```
+
+## Autocomplete (`autocomplete.ts`)
+
+As-you-type suggestions using n-gram tokenization, which matches substrings in the middle of words — typing `wir` matches `wireless`.
+
+```bash
+pnpm examples autocomplete.ts
+```
+
+## More Like This (`more-like-this.ts`)
+
+"Related content" recommendations. Finds documents with similar keywords using TF-IDF logic, without requiring vector embeddings.
+
+```bash
+pnpm examples more-like-this.ts
 ```
 
 ## Shared Helpers (`common.ts`)
