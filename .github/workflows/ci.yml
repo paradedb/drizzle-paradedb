@@ -100,14 +100,6 @@ jobs:
       - name: Check API coverage
         run: uv run --with json5 scripts/check_api_coverage.py
 
-  package-smoke:
-    name: Package Install Smoke Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
 
