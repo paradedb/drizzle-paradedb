@@ -44,6 +44,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Validate version
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -80,24 +93,16 @@ jobs:
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "PACKAGE_NAME=${PACKAGE_NAME}" >> "$GITHUB_ENV"
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          registry-url: https://registry.npmjs.org
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Build package
         run: |
           pnpm build
           npm pack --dry-run
           echo "✅ Package built and validated"
+
+      - name: Publish to npm
+        run: |
+          npm publish --access public
+          echo "✅ Published ${PACKAGE_NAME} ${VERSION} to npm"
 
       - name: Determine if latest
         id: latest
@@ -105,7 +110,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           LATEST=$(gh release list --jq '.[] | select(.isLatest == true) | .name' --json=name,isLatest | sed 's/^v//' || echo "0.0.0")
-          if pnpm dlx semver -r ">${LATEST:-0.0.0}" "${VERSION}"; then
+          if npx --yes semver -r ">${LATEST:-0.0.0}" "${VERSION}"; then
             echo "is_latest=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_latest=false" >> "$GITHUB_OUTPUT"
@@ -115,17 +120,12 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.VERSION }}
-          target_commitish: ${{ github.ref_name }}
+          target_commitish: ${{ github.sha }}
           prerelease: ${{ github.event.inputs.beta }}
           make_latest: ${{ steps.latest.outputs.is_latest }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Publish to npm
-        run: |
-          npm publish --access public
-          echo "✅ Published ${PACKAGE_NAME} ${VERSION} to npm"
 
       - name: Summary
         run: |
