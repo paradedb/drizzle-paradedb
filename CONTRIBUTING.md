@@ -1,4 +1,4 @@
-# **Contributing to drizzle-paradedb**
+# Contributing to drizzle-paradedb
 
 Welcome! We're excited that you're interested in contributing to drizzle-paradedb and want to make the process as smooth as possible.
 
@@ -24,12 +24,11 @@ This repository has a workflow to assign issues to new contributors automaticall
 
 If you find yourself unable to make progress, don't hesitate to seek help in the issue comments or the [ParadeDB Community Slack](https://paradedb.com/slack). If you no longer wish to work on the issue(s) you self-assigned, please remove yourself from the Assignees list in the sidebar to release it.
 
-### Development Workflow
+### Development Setup
 
 drizzle-paradedb is an npm package that provides Drizzle ORM integration for ParadeDB. Development is done with `pnpm`, which keeps the Node toolchain and dependencies aligned between local work and CI.
 
 ```bash
-# Clone the repository
 git clone https://github.com/paradedb/drizzle-paradedb.git
 cd drizzle-paradedb
 
@@ -40,22 +39,51 @@ pnpm install
 
 # Install prek hooks
 pnpm dlx @j178/prek install
+```
 
-# Start the ParadeDB container and export DATABASE_URL
+### Running Tests
+
+Run the tests to verify every change:
+
+```bash
 pnpm db:setup
-
-# Run tests
 pnpm test
+```
 
-# Run formatting
+To run a subset of tests, pass vitest selectors:
+
+```bash
+pnpm test tests/queries.test.ts -t "score"
+```
+
+`pnpm db:setup` starts a ParadeDB container via Docker and exports `DATABASE_URL`. The default container name is `drizzle-paradedb` on port `5432`.
+
+Some integration tests require newer pg_search versions and are skipped automatically if the feature is not available.
+
+### Linting and Formatting
+
+```bash
+# Formatting
 pnpm format
 pnpm format:check
 
-# Run type checking
+# Type checking
 pnpm typecheck
 
 # Build the package
 pnpm build
+
+# Pre-commit hooks (markdownlint, codespell, etc.)
+pnpm dlx @j178/prek install
+pnpm dlx @j178/prek run --all-files
+```
+
+### API and Packaging Consistency Checks
+
+Run these before opening a PR if your change touches SQL wrappers, API constants, packaging, or release metadata:
+
+```bash
+uv run --with json5 scripts/check_api_coverage.py
 ```
 
 ### Pull Request Workflow
@@ -70,7 +98,9 @@ All changes to drizzle-paradedb happen through GitHub Pull Requests. Here is the
 6. Open a pull request towards the `main` branch. Ensure that all tests and checks pass. Note that the drizzle-paradedb repository has pull request title linting in place and follows the [Conventional Commits spec](https://www.conventionalcommits.org/).
 7. Congratulations! Our team will review your pull request.
 
-If your change touches SQL wrappers, API constants, packaging, or release metadata, run the API/package checks under `scripts/` before opening the PR.
+### Changelog
+
+When you make a change that a user of this project would care about, record it in the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md). If the change is breaking, make sure to denote that.
 
 ### Documentation
 

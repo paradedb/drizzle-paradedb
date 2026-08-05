@@ -34,9 +34,9 @@
 
 ---
 
-# ParadeDB for Drizzle
+## ParadeDB for Drizzle
 
-The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. The integration covers both full-text and [vector search](https://docs.paradedb.com/documentation/vector/overview): ParadeDB indexes can index [pgvector](https://github.com/pgvector/pgvector) `vector` columns for Top-K retrieval. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
+The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension), including first-class support for managing ParadeDB indexes and running queries using the full ParadeDB API. The integration covers both full-text search and [vector search](https://docs.paradedb.com/documentation/vector/overview) over pgvector `vector` types. Follow the [getting started guide](https://docs.paradedb.com/documentation/getting-started/environment#drizzle) to begin.
 
 ## Requirements & Compatibility
 
@@ -50,25 +50,15 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 ## Examples
 
-Run all examples:
-
-```bash
-pnpm examples
-```
-
-Or a specific one:
-
-```bash
-pnpm examples autocomplete.ts
-```
-
 - [Quickstart](examples/quickstart.ts)
-- [Faceted search](examples/faceted-search.ts)
-- [Vector search](examples/vector-search.ts)
-- [Hybrid RRF](examples/hybrid-rrf.ts)
-- [RAG](examples/rag.ts)
+- [Vector Search](examples/vector-search.ts)
+- [Faceted Search](examples/faceted-search.ts)
 - [Autocomplete](examples/autocomplete.ts)
 - [More Like This](examples/more-like-this.ts)
+- [Hybrid Search (RRF)](examples/hybrid-rrf.ts)
+- [RAG](examples/rag.ts)
+
+See [examples/README.md](examples/README.md) for setup instructions and a description of each example.
 
 ## Contributing
 
