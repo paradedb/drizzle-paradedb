@@ -59,7 +59,7 @@ Requires the `pgvector` extension, which is included in the ParadeDB Docker imag
 pnpm examples hybrid-rrf.ts
 ```
 
-## RAG (`rag.ts`)
+## Retrieval-Augmented Generation (RAG) (`rag.ts`)
 
 A small question-answering flow. Retrieves relevant context with ParadeDB, then sends it to an LLM so answers are grounded in your own data.
 
