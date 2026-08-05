@@ -83,8 +83,6 @@ async function hybridSearch(
       .orderBy(desc(search.score(mockItems.id)))
       .limit(topK),
   );
-  // The search.all() predicate is required: without a @@@ predicate the index
-  // cannot serve the query and Postgres falls back to a sequential scan.
   const semantic = db.$with("semantic").as(
     db
       .select({
