@@ -37,7 +37,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
-    "db:setup": "bash scripts/setup_db.sh",
+    "db:setup": "bash scripts/run_paradedb.sh",
     "examples": "bash scripts/run_examples.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

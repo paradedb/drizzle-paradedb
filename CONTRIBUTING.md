@@ -46,8 +46,7 @@ uvx prek install
 Run the tests to verify every change:
 
 ```bash
-pnpm db:setup
-pnpm test
+bash scripts/run_tests.sh
 ```
 
 To run a subset of tests, pass vitest selectors:
