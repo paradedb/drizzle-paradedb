@@ -1,4 +1,4 @@
-import { and, desc, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -89,6 +89,32 @@ describe("ParadeDB query language", () => {
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& lower($1)`,
     );
     expect(generated.params).toStrictEqual(["RUNNING SHOES"]);
+
+    await query;
+  });
+  it("runs matchAll with a subquery argument", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        description: mockItems.description,
+      })
+      .from(mockItems)
+      .where(
+        search.matchAll(
+          mockItems.description,
+          db
+            .select({ query: mockItems.description })
+            .from(mockItems)
+            .where(eq(mockItems.id, 1)),
+        ),
+      );
+
+    const generated = query.toSQL();
+
+    expect(generated.sql).toBe(
+      `select "id", "description" from "mock_items" where "mock_items"."description" &&& (select "description" from "mock_items" where "mock_items"."id" = $1)`,
+    );
+    expect(generated.params).toStrictEqual([1]);
 
     await query;
   });
