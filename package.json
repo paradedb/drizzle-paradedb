@@ -11,7 +11,10 @@
     "bm25",
     "text search",
     "full text search",
-    "hybrid search"
+    "hybrid search",
+    "vector search",
+    "faceted search",
+    "facets"
   ],
   "homepage": "https://github.com/paradedb/drizzle-paradedb",
   "bugs": {
