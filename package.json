@@ -14,7 +14,8 @@
     "hybrid search",
     "vector search",
     "faceted search",
-    "facets"
+    "facets",
+    "aggregations"
   ],
   "homepage": "https://github.com/paradedb/drizzle-paradedb",
   "bugs": {
