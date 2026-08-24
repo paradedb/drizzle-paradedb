@@ -50,6 +50,7 @@ repos:
       - id: codespell
         args: ["--config", ".codespellrc", "--check-filenames"]
         exclude: ^pnpm-lock\.yaml$
+
   - repo: local
     hooks:
       - id: typecheck
