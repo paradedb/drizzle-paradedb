@@ -25,6 +25,14 @@ repos:
       - id: destroyed-symlinks
       - id: fix-byte-order-marker
 
+  - repo: local
+    hooks:
+      - id: format
+        name: pnpm format
+        entry: pnpm format
+        language: system
+        pass_filenames: false
+
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
@@ -42,13 +50,9 @@ repos:
       - id: codespell
         args: ["--config", ".codespellrc", "--check-filenames"]
         exclude: ^pnpm-lock\.yaml$
+
   - repo: local
     hooks:
-      - id: format
-        name: pnpm format
-        entry: pnpm format
-        language: system
-        pass_filenames: false
       - id: typecheck
         name: pnpm typecheck
         entry: pnpm typecheck
