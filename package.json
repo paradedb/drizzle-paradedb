@@ -59,7 +59,7 @@
     "prettier": "^3.9.6",
     "tsup": "^8.5.1",
     "tsx": "^4.22.3",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.23.0",
