@@ -48,6 +48,8 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 | PostgreSQL | 15+ (with the ParadeDB pg_search extension)                        |
 | pgvector   | Required for vector search (included in the ParadeDB Docker image) |
 
+`paradedbIndex().on()` treats every argument as an ordinary indexed field and does not generate `key_field`. This requires a pg_search version with keyless index support. For older servers, add the deprecated option explicitly with the returned index builder's `.with({ key_field: "id" })` method, including any other storage options there.
+
 ## Examples
 
 - [Quickstart](examples/quickstart.ts)
