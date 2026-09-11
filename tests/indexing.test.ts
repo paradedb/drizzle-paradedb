@@ -19,7 +19,7 @@ afterAll(async () => {
 });
 
 describe("ParadeDB indexing helpers", () => {
-  it("generates and runs paradedb index SQL", async () => {
+  it("generates and runs an index with a tokenized first field and no key field", async () => {
     const products = pgTable(
       "indexing_test_products",
       {
@@ -32,7 +32,6 @@ describe("ParadeDB indexing helpers", () => {
         indexing
           .paradedbIndex("indexing_test_products_idx")
           .on(
-            table.id,
             indexing.paradedbField(
               table.description,
               tokenizer.ngram(3, 3, { positions: true }),
@@ -52,7 +51,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WITH (key_field=id) WHERE "rating" > 0;`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ((("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WHERE "rating" > 0;`,
     );
 
     await runStatements(statements);
@@ -96,7 +95,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (key_field=id, search_tokenizer='simple(lowercase=false)');`,
+      `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
     );
 
     await runStatements(statements);
@@ -125,7 +124,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateMigration(prev, cur);
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories") WITH (key_field=id, search_tokenizer='simple');`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories") WITH (search_tokenizer='simple');`,
     );
 
     await runStatements(statements);
@@ -135,7 +134,7 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateVectorIndexStatements();
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops);`,
     );
 
     await runStatements(statements);
@@ -149,7 +148,7 @@ describe("ParadeDB indexing helpers", () => {
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id, centroid_ratio=0.01, training_samples_per_centroid=32, cluster_replication=1);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (centroid_ratio=0.01, training_samples_per_centroid=32, cluster_replication=1);`,
     );
 
     await runStatements(statements);
@@ -161,7 +160,7 @@ describe("ParadeDB indexing helpers", () => {
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (key_field=id, centroid_ratio=0.5);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (centroid_ratio=0.5);`,
     );
 
     await runStatements(statements);
@@ -237,7 +236,7 @@ export default defineConfig({
         `;
 
       expect(indexes.map((row) => row.indexdef)).toStrictEqual([
-        "CREATE INDEX drizzle_kit_products_idx ON public.drizzle_kit_products USING paradedb (id, ((description)::pdb.simple), category) WITH (key_field=id)",
+        "CREATE INDEX drizzle_kit_products_idx ON public.drizzle_kit_products USING paradedb (id, ((description)::pdb.simple), category)",
       ]);
 
       await db.execute(
