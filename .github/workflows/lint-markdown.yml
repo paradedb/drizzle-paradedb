@@ -33,22 +33,9 @@ jobs:
       - name: Checkout Git Repository
         uses: actions/checkout@v7
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up NodeJS Environment
-        uses: actions/setup-node@v7
+      - name: Lint Markdown
+        uses: paradedb/actions/lint-prettier@a024855293e56a720daa69e6648d023dd0cb9f77
         with:
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Install markdownlint
-        run: npm install -g markdownlint-cli@0.45.0
-
-      - name: Run Markdown Lint
-        run: markdownlint "**/*.md" --ignore node_modules
-
-      - name: Run Prettier
-        run: pnpm exec prettier --check "{**/*.md,**/*.mdx}"
+          patterns: "{**/*.md,**/*.mdx}"
+          markdown: "true"
+          prettier-source: pnpm
