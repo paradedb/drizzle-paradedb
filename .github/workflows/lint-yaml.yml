@@ -34,5 +34,3 @@ jobs:
 
       - name: Lint YAML
         uses: paradedb/actions/lint-yaml@v12
-        with:
-          prettier-source: pnpm
