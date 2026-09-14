@@ -32,16 +32,5 @@ jobs:
       - name: Checkout Git Repository
         uses: actions/checkout@v7
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up NodeJS Environment
-        uses: actions/setup-node@v7
-        with:
-          cache: pnpm
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Check YAML Formatting
-        run: pnpm exec prettier --check "**/*.{yml,yaml}"
+      - name: Lint YAML
+        uses: paradedb/actions/lint-yaml@v12

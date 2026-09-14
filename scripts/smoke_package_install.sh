@@ -44,7 +44,7 @@ APP_DIR="${WORK_DIR}/app"
 mkdir -p "${APP_DIR}"
 cd "${APP_DIR}"
 
-cat > package.json <<'JSON'
+cat >package.json <<'JSON'
 {
   "name": "drizzle-paradedb-smoke",
   "private": true,
@@ -55,7 +55,7 @@ JSON
 
 npm install --no-audit --no-fund --silent "${TARBALL}" >/dev/null
 
-cat > smoke.mjs <<JSON
+cat >smoke.mjs <<JSON
 import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
 import { search } from "${PKG_NAME}";
 
