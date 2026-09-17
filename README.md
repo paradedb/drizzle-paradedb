@@ -36,7 +36,7 @@
 
 ## ParadeDB for Drizzle
 
-The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension). The integration covers both [full-text search](https://www.paradedb.com/docs/reference/full-text/overview) and [vector search](https://www.paradedb.com/docs/reference/vector/overview) over pgvector `vector` types. Follow the [getting started guide](https://www.paradedb.com/docs/start/connect-your-app#drizzle) to begin.
+The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](https://paradedb.com) (powered by the [`pg_search`](https://github.com/paradedb/paradedb) Postgres extension). Follow the [getting started guide](https://www.paradedb.com/docs/start/connect-your-app#drizzle) to begin.
 
 ## Requirements & Compatibility
 
