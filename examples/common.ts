@@ -76,7 +76,7 @@ export const autocompleteItems = pgTable(
 export async function setupMockItems(): Promise<void> {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
   await db.execute(sql`
-    CALL paradedb.create_bm25_test_table(
+    CALL paradedb.create_paradedb_test_table(
       schema_name => 'public',
       table_name => 'mock_items'
     )
@@ -85,7 +85,7 @@ export async function setupMockItems(): Promise<void> {
   await db.execute(sql`
     CREATE INDEX search_idx ON mock_items
     USING paradedb (id, description, ((category)::pdb.literal), rating, in_stock, created_at, metadata, weight_range, last_updated_date, latest_available_time, embedding vector_cosine_ops)
-    WITH (key_field='id', json_fields='{"metadata":{"fast":true}}')
+    WITH (json_fields='{"metadata":{"fast":true}}')
   `);
 }
 
@@ -112,7 +112,6 @@ export async function setupAutocompleteItems(): Promise<void> {
   await db.execute(sql`
     CREATE INDEX search_idx ON autocomplete_items
     USING paradedb (id, description, ((description)::pdb.ngram(3,8,'alias=description_ngram')), ((category)::pdb.literal))
-    WITH (key_field='id')
   `);
 }
 

@@ -26,11 +26,11 @@ export function paradedbIndex(
   name?: string,
   options: ParadedbIndexOptions = {},
 ): {
-  on(keyField: PgColumn, ...fields: IndexField[]): IndexBuilder;
+  on(field: IndexField, ...fields: IndexField[]): IndexBuilder;
 } {
   return {
-    on(keyField, ...fields) {
-      const withOptions: Record<string, string> = { key_field: keyField.name };
+    on(field, ...fields) {
+      const withOptions: Record<string, string> = {};
       if (options.searchTokenizer) {
         withOptions.search_tokenizer = quote(
           renderSearchTokenizer(options.searchTokenizer),
@@ -48,9 +48,10 @@ export function paradedbIndex(
         withOptions.cluster_replication = String(options.clusterReplication);
       }
 
-      return index(name)
-        .using("paradedb", keyField, ...fields)
-        .with(withOptions);
+      const builder = index(name).using("paradedb", field, ...fields);
+      return Object.keys(withOptions).length
+        ? builder.with(withOptions)
+        : builder;
     },
   };
 }
