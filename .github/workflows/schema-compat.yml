@@ -76,9 +76,6 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Run examples
-        run: pnpm examples
-
   notify:
     name: Notify on Failure
     runs-on: ubuntu-latest

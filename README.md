@@ -48,18 +48,6 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 | PostgreSQL | 15+ (with the ParadeDB pg_search extension)                        |
 | pgvector   | Required for vector search (included in the ParadeDB Docker image) |
 
-## Examples
-
-- [Quickstart](examples/quickstart.ts)
-- [Vector Search](examples/vector-search.ts)
-- [Faceted Search](examples/faceted-search.ts)
-- [Hybrid Search (RRF)](examples/hybrid-rrf.ts)
-- [Retrieval-Augmented Generation (RAG)](examples/rag.ts)
-- [Autocomplete](examples/autocomplete.ts)
-- [More Like This](examples/more-like-this.ts)
-
-See [examples/README.md](examples/README.md) for setup instructions and a description of each example.
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, running tests, linting, and the PR workflow.
