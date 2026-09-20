@@ -50,15 +50,15 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 ## Examples
 
-- [Quickstart](examples/quickstart.ts)
-- [Vector Search](examples/vector-search.ts)
-- [Faceted Search](examples/faceted-search.ts)
-- [Hybrid Search (RRF)](examples/hybrid-rrf.ts)
-- [Retrieval-Augmented Generation (RAG)](examples/rag.ts)
-- [Autocomplete](examples/autocomplete.ts)
-- [More Like This](examples/more-like-this.ts)
+Follow the [example setup guide](https://www.paradedb.com/docs/guides/setup), then choose a guide and select the Drizzle tab:
 
-See [examples/README.md](examples/README.md) for setup instructions and a description of each example.
+- [Quickstart](https://www.paradedb.com/docs/guides/quickstart)
+- [Vector Search](https://www.paradedb.com/docs/guides/vector-search)
+- [Faceted Search](https://www.paradedb.com/docs/guides/faceted-search)
+- [Hybrid Search (RRF)](https://www.paradedb.com/docs/guides/hybrid-search)
+- [Retrieval-Augmented Generation (RAG)](https://www.paradedb.com/docs/guides/rag-and-agents)
+- [Autocomplete](https://www.paradedb.com/docs/guides/search-as-you-type)
+- [More Like This](https://www.paradedb.com/docs/guides/more-like-this)
 
 ## Contributing
 
