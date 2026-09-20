@@ -52,7 +52,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 Follow the [example setup guide](https://www.paradedb.com/docs/guides/setup), then choose a guide and select the Drizzle tab:
 
-- [Quickstart](https://www.paradedb.com/docs/guides/quickstart)
+- [Quickstart](https://www.paradedb.com/docs/start/connect-your-app)
 - [Vector Search](https://www.paradedb.com/docs/guides/vector-search)
 - [Faceted Search](https://www.paradedb.com/docs/guides/faceted-search)
 - [Hybrid Search (RRF)](https://www.paradedb.com/docs/guides/hybrid-search)
