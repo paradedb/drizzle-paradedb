@@ -50,7 +50,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 ## Examples
 
-See the [ParadeDB guides](https://www.paradedb.com/docs/guides/overview) for usage examples. Select the Drizzle tab in each guide.
+See [Run Your First Queries](https://www.paradedb.com/docs/start/run-queries) for examples and the [Reference](https://www.paradedb.com/docs/reference/overview) for query syntax. Select the Drizzle tab in the code examples.
 
 ## Contributing
 
