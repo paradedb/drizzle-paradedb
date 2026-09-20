@@ -50,15 +50,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 ## Examples
 
-Complete the [Start tutorial](https://www.paradedb.com/docs/start/connect-your-app), then choose a guide and select the Drizzle tab:
-
-- [Quickstart](https://www.paradedb.com/docs/start/connect-your-app)
-- [Vector Search](https://www.paradedb.com/docs/guides/vector-search)
-- [Faceted Search](https://www.paradedb.com/docs/guides/faceted-search)
-- [Hybrid Search (RRF)](https://www.paradedb.com/docs/guides/hybrid-search)
-- [Retrieval-Augmented Generation (RAG)](https://www.paradedb.com/docs/guides/rag)
-- [Autocomplete](https://www.paradedb.com/docs/guides/autocomplete)
-- [More Like This](https://www.paradedb.com/docs/guides/more-like-this)
+See the [ParadeDB guides](https://www.paradedb.com/docs/guides/overview) for usage examples. Select the Drizzle tab in each guide.
 
 ## Contributing
 
