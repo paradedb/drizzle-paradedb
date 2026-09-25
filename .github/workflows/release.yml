@@ -59,9 +59,10 @@ jobs:
 
       - name: Validate version
         env:
+          VERSION: ${{ github.event.inputs.version }}
+          BETA: ${{ github.event.inputs.beta }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
           PACKAGE_NAME=$(node -p "require('./package.json').name")
 
           # Check release doesn't exist
@@ -77,7 +78,7 @@ jobs:
           fi
 
           # Validate beta suffix
-          if [[ "${{ github.event.inputs.beta }}" == "true" && "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "${BETA}" == "true" && "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "❌ Beta releases must have prerelease suffix (e.g., 0.1.0-beta.1)"
             exit 1
           fi
