@@ -52,14 +52,14 @@
   },
   "devDependencies": {
     "@types/node": "^26.0.1",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.2",
     "drizzle-kit": "1.0.0-rc.4",
     "postgres": "^3.4.9",
     "prettier": "^3.9.6",
     "tsup": "^8.5.1",
     "tsx": "^4.22.3",
     "typescript": "6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.2"
   },
   "packageManager": "pnpm@11.23.0",
   "engines": {
