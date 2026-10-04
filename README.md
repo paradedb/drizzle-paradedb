@@ -44,7 +44,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 | ---------- | ------------------------------------------------------------------ |
 | Node       | 22.12+                                                             |
 | Drizzle    | 1.0+                                                               |
-| ParadeDB   | 0.25.0+                                                            |
+| ParadeDB   | 0.26.0+                                                            |
 | PostgreSQL | 15+ (with the ParadeDB pg_search extension)                        |
 | pgvector   | Required for vector search (included in the ParadeDB Docker image) |
 

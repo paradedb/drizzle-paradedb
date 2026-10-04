@@ -17,40 +17,35 @@ type IndexField = PgColumn | SQL;
 
 export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
-  centroidRatio?: number;
-  trainingSamplesPerCentroid?: number;
-  clusterReplication?: number;
+  trainingSampleRatio?: number;
+  maxLeafSize?: number;
 };
 
 export function paradedbIndex(
   name?: string,
   options: ParadedbIndexOptions = {},
 ): {
-  on(keyField: PgColumn, ...fields: IndexField[]): IndexBuilder;
+  on(...fields: [IndexField, ...IndexField[]]): IndexBuilder;
 } {
   return {
-    on(keyField, ...fields) {
-      const withOptions: Record<string, string> = { key_field: keyField.name };
+    on(...fields) {
+      const withOptions: Record<string, string> = {};
       if (options.searchTokenizer) {
         withOptions.search_tokenizer = quote(
           renderSearchTokenizer(options.searchTokenizer),
         );
       }
-      if (options.centroidRatio !== undefined) {
-        withOptions.centroid_ratio = String(options.centroidRatio);
+      if (options.trainingSampleRatio !== undefined) {
+        withOptions.training_sample_ratio = String(options.trainingSampleRatio);
       }
-      if (options.trainingSamplesPerCentroid !== undefined) {
-        withOptions.training_samples_per_centroid = String(
-          options.trainingSamplesPerCentroid,
-        );
-      }
-      if (options.clusterReplication !== undefined) {
-        withOptions.cluster_replication = String(options.clusterReplication);
+      if (options.maxLeafSize !== undefined) {
+        withOptions.max_leaf_size = String(options.maxLeafSize);
       }
 
-      return index(name)
-        .using("paradedb", keyField, ...fields)
-        .with(withOptions);
+      const builder = index(name).using("paradedb", ...fields);
+      return Object.keys(withOptions).length
+        ? builder.with(withOptions)
+        : builder;
     },
   };
 }
