@@ -24,6 +24,7 @@ concurrency:
 
 env:
   PARADEDB_VERSION: ${{ inputs.version || github.event.client_payload.version }}
+  PARADEDB_IMAGE: paradedb/paradedb:${{ inputs.version || github.event.client_payload.version }}-pg18
 
 permissions:
   contents: read
