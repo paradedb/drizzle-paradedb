@@ -32,6 +32,10 @@ jobs:
             postgres-version: "18"
           - node-version: "22"
             postgres-version: "15"
+          - node-version: "22"
+            postgres-version: "16"
+          - node-version: "22"
+            postgres-version: "17"
 
     services:
       paradedb:
