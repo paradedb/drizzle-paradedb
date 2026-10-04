@@ -40,13 +40,13 @@ The official [Drizzle](https://orm.drizzle.team/) integration for ParadeDB. Get 
 
 ## Requirements & Compatibility
 
-| Component            | Supported                                                                                                                                                            |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Node                 | 22.12+                                                                                                                                                               |
-| Drizzle              | 1.0+                                                                                                                                                                 |
-| PostgreSQL           | 15+                                                                                                                                                                  |
-| pgvector             | 0.7.0+ (provides vector types for ParadeDB’s [native vector search](https://www.paradedb.com/docs/reference/vector/overview), included in the ParadeDB Docker image) |
-| ParadeDB / pg_search | 0.26.0+                                                                                                                                                              |
+| Component            | Supported                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Node                 | 22.12+                                                                                                                        |
+| Drizzle              | 1.0+                                                                                                                          |
+| PostgreSQL           | 15+                                                                                                                           |
+| pgvector             | 0.7.0+ (provides vector types for ParadeDB’s [native vector search](https://www.paradedb.com/docs/reference/vector/overview)) |
+| ParadeDB / pg_search | 0.26.0+                                                                                                                       |
 
 ## Contributing
 
