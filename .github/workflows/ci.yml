@@ -33,6 +33,11 @@ jobs:
           - node-version: "22"
             postgres-version: "15"
 
+          - node-version: "22"
+            postgres-version: "16"
+          - node-version: "22"
+            postgres-version: "17"
+
     services:
       paradedb:
         image: paradedb/paradedb:0.26.0-pg${{ matrix.postgres-version }}
