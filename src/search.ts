@@ -332,7 +332,18 @@ export class Agg extends SQL {
   }
 }
 
-export function agg(agg: Record<string, unknown>, exact?: boolean): Agg {
+export type AggregateVisibility = "transaction" | "raw" | "threshold";
+
+export function agg(
+  agg: Record<string, unknown>,
+  exact?: boolean | AggregateVisibility,
+): Agg {
+  if (
+    typeof exact === "string" &&
+    !["transaction", "raw", "threshold"].includes(exact)
+  ) {
+    throw new Error("visibility must be transaction, raw, or threshold");
+  }
   const payload = JSON.stringify(agg);
   const expr =
     exact === undefined
@@ -341,7 +352,7 @@ export function agg(agg: Record<string, unknown>, exact?: boolean): Agg {
   const windowBaseExpr =
     exact === undefined
       ? sql`pdb.agg(${sql.raw(quote(payload))})`
-      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(String(exact))})`;
+      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof exact === "string" ? quote(exact) : String(exact))})`;
 
   return new Agg(expr, sql`${windowBaseExpr} OVER ()`, windowBaseExpr);
 }

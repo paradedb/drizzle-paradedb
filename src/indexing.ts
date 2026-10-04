@@ -19,6 +19,15 @@ export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
   trainingSampleRatio?: number;
   maxLeafSize?: number;
+  /** Comma-separated names of single-valued columnar index fields. */
+  partitionBy?: string;
+  /** Experimental stacked IVF router; omitted to use the server default. */
+  vectorRouter?: "graph" | "ivf";
+  targetSegmentCount?: number;
+  vectorFields?: Record<
+    string,
+    { quantization?: boolean | { layers: readonly (1 | 2 | 3 | 4)[] } }
+  >;
 };
 
 export function paradedbIndex(
@@ -40,6 +49,39 @@ export function paradedbIndex(
       }
       if (options.maxLeafSize !== undefined) {
         withOptions.max_leaf_size = String(options.maxLeafSize);
+      }
+
+      if (options.vectorRouter !== undefined) {
+        if (!["graph", "ivf"].includes(options.vectorRouter))
+          throw new Error("vectorRouter must be graph or ivf");
+        withOptions.vector_router = quote(options.vectorRouter);
+      }
+      if (options.partitionBy !== undefined) {
+        if (
+          !options.partitionBy
+            .split(",")
+            .every((field) => field.trim().length > 0)
+        ) {
+          throw new Error(
+            "partitionBy must contain non-empty index field names",
+          );
+        }
+        withOptions.partition_by = quote(options.partitionBy);
+      }
+      if (options.targetSegmentCount !== undefined) {
+        if (
+          !Number.isInteger(options.targetSegmentCount) ||
+          options.targetSegmentCount < 1 ||
+          options.targetSegmentCount > 2147483647
+        ) {
+          throw new Error(
+            "targetSegmentCount must be an integer between 1 and 2147483647",
+          );
+        }
+        withOptions.target_segment_count = String(options.targetSegmentCount);
+      }
+      if (options.vectorFields !== undefined) {
+        withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
       }
 
       const builder = index(name).using("paradedb", ...fields);

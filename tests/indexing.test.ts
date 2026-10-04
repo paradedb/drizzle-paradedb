@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { tokenizer, search, indexing } from "../src/index.js";
+import { tokenizer, search, indexing, diagnostics } from "../src/index.js";
 import { client, db } from "./db.js";
 
 afterAll(async () => {
@@ -19,6 +19,125 @@ afterAll(async () => {
 });
 
 describe("ParadeDB indexing helpers", () => {
+  it("creates partitioned vector indexes and exposes visibility and diagnostics", async () => {
+    const items = pgTable(
+      "indexing_test_products",
+      {
+        id: integer("id"),
+        rating: integer("rating"),
+        description: text("description"),
+        embedding: indexing.vector("embedding", { dimensions: 64 }),
+      },
+      (table) => [
+        indexing
+          .paradedbIndex("indexing_test_products_idx", {
+            vectorRouter: "ivf",
+            partitionBy: "rating,id",
+            targetSegmentCount: 8,
+            vectorFields: { embedding: { quantization: false } },
+          })
+          .on(
+            table.id,
+            table.rating,
+            indexing.paradedbField(
+              table.description,
+              tokenizer.simple({ pnorms: true }),
+            ),
+            indexing.paradedbField(
+              table.description,
+              tokenizer.jieba({
+                alias: "description_jieba",
+                search_mode: false,
+              }),
+            ),
+            indexing.paradedbField(
+              table.description,
+              tokenizer.chineseCompatible({
+                alias: "description_chinese",
+                chinese_convert: "t2s",
+              }),
+            ),
+            indexing.vectorField(table.embedding),
+          ),
+      ],
+    );
+    const statements = await generateMigration(
+      await generateDrizzleJson({}),
+      await generateDrizzleJson({ items }),
+    );
+    await db.execute(
+      sql.raw("DROP TABLE IF EXISTS indexing_test_products CASCADE"),
+    );
+    try {
+      for (const statement of statements) await db.execute(sql.raw(statement));
+      await db.execute(
+        sql`INSERT INTO indexing_test_products SELECT i, i % 3, 'partitioned shoes', ARRAY(SELECT sin(i*j)::real FROM generate_series(1,64) j)::vector FROM generate_series(1,2048) i`,
+      );
+      const options = await db.execute(
+        sql`SELECT reloptions FROM pg_class WHERE oid = 'indexing_test_products_idx'::regclass`,
+      );
+      expect(options[0].reloptions).toContain("partition_by=rating,id");
+      expect(options[0].reloptions).toContain("target_segment_count=8");
+      const config = await db.execute(
+        diagnostics.vectorConfig("indexing_test_products_idx", "embedding"),
+      );
+      expect(config[0].quantized).toBe(false);
+      expect(
+        (
+          await db.execute(
+            diagnostics.vectorInfo("indexing_test_products_idx", "embedding"),
+          )
+        ).length,
+      ).toBeGreaterThan(0);
+      await db.execute(
+        sql.raw(
+          `ALTER INDEX indexing_test_products_idx SET (target_segment_count = 1, max_leaf_size = 16, vector_fields = '{"embedding":{"quantization":true}}')`,
+        ),
+      );
+      await db.execute(sql`REINDEX INDEX indexing_test_products_idx`);
+      const quantizedConfig = await db.execute(
+        diagnostics.vectorConfig("indexing_test_products_idx", "embedding"),
+      );
+      expect(quantizedConfig[0].quantized).toBe(true);
+      await db.execute(
+        diagnostics.vectorEstimatorInfo(
+          "indexing_test_products_idx",
+          "embedding",
+        ),
+      );
+      await db.execute(
+        diagnostics.vectorEstimatorInfo(
+          "indexing_test_products_idx",
+          "embedding",
+          [Array(64).fill(0.1)],
+        ),
+      );
+      for (const visibility of ["transaction", "raw", "threshold"] as const) {
+        const result = await db
+          .select({
+            result: search.agg({ value_count: { field: "id" } }, visibility),
+          })
+          .from(items);
+        expect(result[0].result).toEqual({ value: 2048 });
+        const window = await db
+          .select({
+            result: search
+              .agg({ value_count: { field: "id" } }, visibility)
+              .over(),
+          })
+          .from(items)
+          .limit(1);
+        expect(window[0].result).toEqual({ value: 2048 });
+      }
+      const count = await db.execute(
+        sql`SELECT COUNT(*)::int AS count FROM indexing_test_products WHERE description @@@ 'shoes' AND rating = 1`,
+      );
+      expect(count[0].count).toBe(683);
+    } finally {
+      await db.execute(sql`DROP TABLE indexing_test_products`);
+    }
+  });
+
   it("generates and runs an index with a tokenized first field", async () => {
     const products = pgTable(
       "indexing_test_products",
