@@ -8,11 +8,12 @@ IMAGE="${PARADEDB_IMAGE:-paradedb/paradedb:${PARADEDB_VERSION}-pg${PARADEDB_POST
 CONTAINER_NAME="${PARADEDB_CONTAINER_NAME:-drizzle-paradedb}"
 
 PORT="${PARADEDB_PORT:-5432}"
+HOST="${PARADEDB_HOST:-127.0.0.1}"
 USER="${PARADEDB_USER:-postgres}"
 PASSWORD="${PARADEDB_PASSWORD:-postgres}"
 DB="${PARADEDB_DB:-postgres}"
 
-export DATABASE_URL="${DATABASE_URL:-postgresql://${USER}:${PASSWORD}@${PARADEDB_HOST:-localhost}:${PORT}/${DB}}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://${USER}:${PASSWORD}@${HOST}:${PORT}/${DB}}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required to set up the ParadeDB test database" >&2
@@ -56,11 +57,11 @@ fi
 # temporary socket-only server that seeds extensions and sample data, and it
 # must not be mistaken for the real one.
 echo "Waiting for ParadeDB to become ready..."
-for _ in {1..30}; do
+for ((paradedb_attempt = 1; paradedb_attempt <= ${PARADEDB_WAIT_ATTEMPTS:-30}; paradedb_attempt++)); do
   if docker exec "$CONTAINER_NAME" pg_isready -h 127.0.0.1 -U "$USER" -d "$DB" >/dev/null 2>&1; then
     break
   fi
-  sleep 5
+  sleep "${PARADEDB_WAIT_INTERVAL:-2}"
 done
 
 if ! docker exec "$CONTAINER_NAME" pg_isready -h 127.0.0.1 -U "$USER" -d "$DB" >/dev/null 2>&1; then

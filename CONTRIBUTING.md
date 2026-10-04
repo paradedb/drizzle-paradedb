@@ -52,12 +52,12 @@ bash scripts/run_tests.sh
 To run a subset of tests, pass vitest selectors:
 
 ```bash
-pnpm test tests/queries.test.ts -t "score"
+bash scripts/run_tests.sh tests/query.test.ts -t "score"
 ```
 
 `pnpm db:setup` starts a ParadeDB container via Docker. `bash scripts/run_tests.sh` also starts the container when needed and passes its connection URL to the tests. Set `DATABASE_URL` to use an existing test database. The default container is `drizzle-paradedb` on port `5432`.
 
-Some integration tests require newer pg_search versions and are skipped automatically if the feature is not available.
+Local container startup supports `PARADEDB_HOST` (default `127.0.0.1`), `PARADEDB_PORT` (default `5432`), `PARADEDB_WAIT_ATTEMPTS` (default `30`), and `PARADEDB_WAIT_INTERVAL` (default `2` seconds).
 
 ### Linting and Formatting
 
