@@ -40,13 +40,13 @@ The official [Drizzle](https://orm.drizzle.team/) integration for [ParadeDB](htt
 
 ## Requirements & Compatibility
 
-| Component  | Supported                                                          |
-| ---------- | ------------------------------------------------------------------ |
-| Node       | 22.12+                                                             |
-| Drizzle    | 1.0+                                                               |
-| ParadeDB   | 0.26.0+                                                            |
-| PostgreSQL | 15+ (with the ParadeDB pg_search extension)                        |
-| pgvector   | Required for vector search (included in the ParadeDB Docker image) |
+| Component  | Supported                                                                                                                                                         |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node       | 22.12+                                                                                                                                                            |
+| Drizzle    | 1.0+                                                                                                                                                              |
+| ParadeDB   | 0.26.0+                                                                                                                                                           |
+| PostgreSQL | 15+ (with the ParadeDB pg_search extension)                                                                                                                       |
+| pgvector   | Provides vector data types for ParadeDB’s [native vector search](https://www.paradedb.com/docs/reference/vector/overview) (included in the ParadeDB Docker image) |
 
 ## Contributing
 
