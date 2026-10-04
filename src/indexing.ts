@@ -17,6 +17,9 @@ type IndexField = PgColumn | SQL;
 
 export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
+  layerSizes?: string;
+  backgroundLayerSizes?: string;
+  mutableSegmentRows?: number;
   trainingSampleRatio?: number;
   maxLeafSize?: number;
   /** Names of single-valued columnar index fields. */
@@ -59,6 +62,27 @@ export function paradedbIndex(
         withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
       }
 
+      for (const [name, value] of [
+        ["layer_sizes", options.layerSizes],
+        ["background_layer_sizes", options.backgroundLayerSizes],
+      ] as const) {
+        if (value !== undefined) {
+          if (!value.trim())
+            throw new Error(`${name} must be a non-empty size string`);
+          withOptions[name] = quote(value);
+        }
+      }
+      if (options.mutableSegmentRows !== undefined) {
+        if (
+          !Number.isInteger(options.mutableSegmentRows) ||
+          options.mutableSegmentRows < 0 ||
+          options.mutableSegmentRows > 10000
+        )
+          throw new Error(
+            "mutableSegmentRows must be an integer between 0 and 10000",
+          );
+        withOptions.mutable_segment_rows = String(options.mutableSegmentRows);
+      }
       const builder = index(name).using("paradedb", ...fields);
       return Object.keys(withOptions).length
         ? builder.with(withOptions)
