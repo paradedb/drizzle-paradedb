@@ -18,7 +18,7 @@ const mockItemsWithSerialId = pgTable("mock_items", {
 beforeAll(async () => {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
   await db.execute(sql`
-    CALL paradedb.create_bm25_test_table(
+    CALL paradedb.create_paradedb_test_table(
       schema_name => 'public',
       table_name => 'mock_items'
     );
@@ -26,8 +26,7 @@ beforeAll(async () => {
 
   await db.execute(sql`
     CREATE INDEX search_idx ON mock_items
-    USING paradedb (id, description, category, rating, in_stock, created_at, metadata, weight_range, embedding vector_l2_ops)
-    WITH (key_field='id');
+    USING paradedb (id, description, category, rating, in_stock, created_at, metadata, weight_range, embedding vector_l2_ops);
   `);
 });
 

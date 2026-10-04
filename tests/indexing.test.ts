@@ -19,7 +19,7 @@ afterAll(async () => {
 });
 
 describe("ParadeDB indexing helpers", () => {
-  it("generates and runs an index with a tokenized first field and no key field", async () => {
+  it("generates and runs an index with a tokenized first field", async () => {
     const products = pgTable(
       "indexing_test_products",
       {
@@ -142,13 +142,12 @@ describe("ParadeDB indexing helpers", () => {
 
   it("generates and runs vector index SQL with all build options", async () => {
     const statements = await generateVectorIndexStatements({
-      centroidRatio: 0.01,
-      trainingSamplesPerCentroid: 32,
-      clusterReplication: 1,
+      trainingSampleRatio: 0.01,
+      maxLeafSize: 32,
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (centroid_ratio=0.01, training_samples_per_centroid=32, cluster_replication=1);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32);`,
     );
 
     await runStatements(statements);
@@ -156,11 +155,11 @@ describe("ParadeDB indexing helpers", () => {
 
   it("generates and runs vector index SQL with a single build option", async () => {
     const statements = await generateVectorIndexStatements({
-      centroidRatio: 0.5,
+      trainingSampleRatio: 0.5,
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (centroid_ratio=0.5);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.5);`,
     );
 
     await runStatements(statements);

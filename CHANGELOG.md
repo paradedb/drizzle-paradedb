@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
-- **Breaking:** `paradedbIndex().on()` no longer generates `key_field` from its first argument, and the first argument may be an indexed expression. New indexes require a pg_search version with keyless index support.
+- **Breaking:** `paradedbIndex().on()` treats every argument as an indexed field, accepts an expression first, and no longer generates `key_field`. Require ParadeDB 0.26.0 or newer.
+- **Breaking:** Update vector index build options to `trainingSampleRatio` and `maxLeafSize` for ParadeDB 0.26.0 and remove the obsolete cluster replication option.
 
 ## [0.5.0] - 2026-08-21
 
