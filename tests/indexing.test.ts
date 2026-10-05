@@ -1,3 +1,4 @@
+import { apiParameterFixture } from "./support/api-parameter-index.js";
 import { sql } from "drizzle-orm";
 import { integer, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core";
 import {
@@ -9,7 +10,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { indexing, search, tokenizer } from "../src/index.js";
 import { client, db } from "./db.js";
@@ -303,3 +304,25 @@ async function runStatements(statements: string[]) {
     await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
   }
 }
+
+describe("Index tuning options", () => {
+  const { items, setup, cleanup } = apiParameterFixture(
+    "api_options_items",
+    "api_options_idx",
+  );
+  beforeAll(setup);
+  afterAll(cleanup);
+  it("persists index options emitted by Drizzle migrations", async () => {
+    const result = await db.execute(
+      sql`SELECT reloptions FROM pg_class WHERE oid = 'api_options_idx'::regclass`,
+    );
+    expect(result[0].reloptions).toEqual(
+      expect.arrayContaining([
+        "layer_sizes=0",
+        "background_layer_sizes=100MB, 1GB",
+        "mutable_segment_rows=0",
+        "search_tokenizer=simple(lowercase=true)",
+      ]),
+    );
+  });
+});

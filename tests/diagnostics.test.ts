@@ -1,3 +1,8 @@
+import { sql } from "drizzle-orm";
+import { afterAll, beforeAll } from "vitest";
+import { search } from "../src/index.js";
+import { client, db } from "./db.js";
+import { apiParameterFixture } from "./support/api-parameter-index.js";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
@@ -114,5 +119,50 @@ describe("ParadeDB index diagnostics helpers", () => {
       "embedding",
       "[0.1,0.2]",
     ]);
+  });
+});
+
+afterAll(async () => {
+  await client.end();
+});
+
+describe("Direct aggregate diagnostics", () => {
+  const { setup, cleanup } = apiParameterFixture(
+    "api_aggregate_items",
+    "api_aggregate_idx",
+  );
+  beforeAll(setup);
+  afterAll(cleanup);
+  it("executes direct aggregates and enforces bucket limits", async () => {
+    const conjunction = search.booleanQuery({
+      should: ["description:red", "description:shoes"],
+      minimumShouldMatch: 2,
+    });
+    const query = search.booleanQuery({
+      must: [
+        search.disjunctionMax([conjunction, "description:boots"], {
+          tieBreaker: 0.5,
+        }),
+      ],
+      mustNot: ["description:blue"],
+    });
+    const result = await db.execute(
+      sql`SELECT ${search.aggregate("api_aggregate_idx", query, { count: { value_count: { field: "id" } } }, { memoryLimit: 10000000, bucketLimit: 100, visibility: "transaction" })} AS result`,
+    );
+    expect(result[0].result).toEqual({ count: { value: 2 } });
+    await expect(
+      db.execute(
+        sql`SELECT ${search.aggregate("api_aggregate_idx", "description:red", { ids: { terms: { field: "id", size: 10 } } }, { memoryLimit: 10000000, bucketLimit: 1 })}`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects invalid aggregate options", () => {
+    expect(() => search.aggregate("idx", "*", {}, { memoryLimit: 0 })).toThrow(
+      "memoryLimit",
+    );
+    expect(() =>
+      search.aggregate("idx", "*", {}, { solveMvcc: true, visibility: "raw" }),
+    ).toThrow("not both");
   });
 });
