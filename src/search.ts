@@ -336,23 +336,17 @@ export type AggregateVisibility = "transaction" | "raw" | "threshold";
 
 export function agg(
   agg: Record<string, unknown>,
-  exact?: boolean | AggregateVisibility,
+  visibility?: boolean | AggregateVisibility,
 ): Agg {
-  if (
-    typeof exact === "string" &&
-    !["transaction", "raw", "threshold"].includes(exact)
-  ) {
-    throw new Error("visibility must be transaction, raw, or threshold");
-  }
   const payload = JSON.stringify(agg);
   const expr =
-    exact === undefined
+    visibility === undefined
       ? sql`pdb.agg(${payload})`
-      : sql`pdb.agg(${payload}, ${exact})`;
+      : sql`pdb.agg(${payload}, ${visibility})`;
   const windowBaseExpr =
-    exact === undefined
+    visibility === undefined
       ? sql`pdb.agg(${sql.raw(quote(payload))})`
-      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof exact === "string" ? quote(exact) : String(exact))})`;
+      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof visibility === "string" ? quote(visibility) : String(visibility))})`;
 
   return new Agg(expr, sql`${windowBaseExpr} OVER ()`, windowBaseExpr);
 }

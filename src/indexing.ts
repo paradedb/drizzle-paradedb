@@ -19,8 +19,8 @@ export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
   trainingSampleRatio?: number;
   maxLeafSize?: number;
-  /** Comma-separated names of single-valued columnar index fields. */
-  partitionBy?: string;
+  /** Names of single-valued columnar index fields. */
+  partitionBy?: readonly string[];
   targetSegmentCount?: number;
   vectorFields?: Record<
     string,
@@ -50,27 +50,9 @@ export function paradedbIndex(
       }
 
       if (options.partitionBy !== undefined) {
-        if (
-          !options.partitionBy
-            .split(",")
-            .every((field) => field.trim().length > 0)
-        ) {
-          throw new Error(
-            "partitionBy must contain non-empty index field names",
-          );
-        }
-        withOptions.partition_by = quote(options.partitionBy);
+        withOptions.partition_by = quote(options.partitionBy.join(","));
       }
       if (options.targetSegmentCount !== undefined) {
-        if (
-          !Number.isInteger(options.targetSegmentCount) ||
-          options.targetSegmentCount < 1 ||
-          options.targetSegmentCount > 2147483647
-        ) {
-          throw new Error(
-            "targetSegmentCount must be an integer between 1 and 2147483647",
-          );
-        }
         withOptions.target_segment_count = String(options.targetSegmentCount);
       }
       if (options.vectorFields !== undefined) {
