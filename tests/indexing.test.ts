@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { tokenizer, search, indexing } from "../src/index.js";
+import { indexing, search, tokenizer } from "../src/index.js";
 import { client, db } from "./db.js";
 
 afterAll(async () => {
@@ -144,10 +144,13 @@ describe("ParadeDB indexing helpers", () => {
     const statements = await generateVectorIndexStatements({
       trainingSampleRatio: 0.01,
       maxLeafSize: 32,
+      partitionBy: ["id"],
+      targetSegmentCount: 8,
+      vectorFields: { embedding: { quantization: false } },
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}');`,
     );
 
     await runStatements(statements);

@@ -19,6 +19,13 @@ export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
   trainingSampleRatio?: number;
   maxLeafSize?: number;
+  /** Names of single-valued columnar index fields. */
+  partitionBy?: readonly string[];
+  targetSegmentCount?: number;
+  vectorFields?: Record<
+    string,
+    { quantization?: boolean | { layers: readonly (1 | 2 | 3 | 4)[] } }
+  >;
 };
 
 export function paradedbIndex(
@@ -40,6 +47,16 @@ export function paradedbIndex(
       }
       if (options.maxLeafSize !== undefined) {
         withOptions.max_leaf_size = String(options.maxLeafSize);
+      }
+
+      if (options.partitionBy !== undefined) {
+        withOptions.partition_by = quote(options.partitionBy.join(","));
+      }
+      if (options.targetSegmentCount !== undefined) {
+        withOptions.target_segment_count = String(options.targetSegmentCount);
+      }
+      if (options.vectorFields !== undefined) {
+        withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
       }
 
       const builder = index(name).using("paradedb", ...fields);

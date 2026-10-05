@@ -101,3 +101,63 @@ function collectVerifyOptions(
 function renderIntegerArray(values: number[]): SQL {
   return sql`ARRAY[${sql.join(values, sql`, `)}]::integer[]`;
 }
+
+export type VectorConfig = {
+  index_oid: number;
+  quantized: boolean;
+  layers: number[] | null;
+  bytes_per_row: number | null;
+  settings_version: number | null;
+};
+
+export type VectorEstimatorInfo = {
+  depth: number;
+  bias: number;
+  spread: number;
+  sample_rows: number;
+  query_count: number;
+  query_source: string;
+};
+
+export type VectorInfo = {
+  segno: string;
+  vector_field: string;
+  vector_format: string;
+  vector_num_vectors: string;
+  vector_num_centroids: string | null;
+  vector_min_cluster_size: string | null;
+  vector_max_cluster_size: string | null;
+  vector_avg_cluster_size: number | null;
+  vector_empty_clusters: string | null;
+  vector_total_rows: string | null;
+  quantized: boolean;
+  layers: number[] | null;
+  quantizer_kinds: string[] | null;
+  bytes_per_row: number | null;
+};
+
+export function vectorInfo(index: string, field: string): SQL<VectorInfo[]> {
+  return sql`SELECT * FROM paradedb.vector_info(${index}::regclass, ${field}::text)`;
+}
+
+export function vectorConfig(
+  index: string,
+  field: string,
+): SQL<VectorConfig[]> {
+  return sql`SELECT * FROM paradedb.vector_config(${index}::regclass, ${field}::text)`;
+}
+
+export function vectorEstimatorInfo(
+  index: string,
+  field: string,
+  queries?: readonly (readonly number[])[],
+): SQL<VectorEstimatorInfo[]> {
+  const queryArg =
+    queries === undefined
+      ? sql``
+      : sql`, ARRAY[${sql.join(
+          queries.map((query) => sql`${JSON.stringify(query)}::vector`),
+          sql`, `,
+        )}]::vector[]`;
+  return sql`SELECT * FROM paradedb.vector_estimator_info(${index}::regclass, ${field}::text${queryArg})`;
+}
