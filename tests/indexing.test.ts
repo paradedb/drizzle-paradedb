@@ -31,7 +31,6 @@ describe("ParadeDB indexing helpers", () => {
       (table) => [
         indexing
           .paradedbIndex("indexing_test_products_idx", {
-            vectorRouter: "ivf",
             partitionBy: "rating,id",
             targetSegmentCount: 8,
             vectorFields: { embedding: { quantization: false } },
