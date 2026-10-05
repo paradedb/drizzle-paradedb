@@ -842,10 +842,10 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
-  it("runs value_count agg", async () => {
+  it("runs value_count agg with visibility", async () => {
     const query = db
       .select({
-        agg: search.agg({ value_count: { field: "id" } }),
+        agg: search.agg({ value_count: { field: "id" } }, "transaction"),
       })
       .from(mockItems)
       .where(search.term(mockItems.category, "electronics"));
@@ -853,10 +853,11 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select pdb.agg($1) from "mock_items" where "mock_items"."category" === $2`,
+      `select pdb.agg($1, $2) from "mock_items" where "mock_items"."category" === $3`,
     );
     expect(generated.params).toStrictEqual([
       `{"value_count":{"field":"id"}}`,
+      "transaction",
       "electronics",
     ]);
 
@@ -937,7 +938,7 @@ describe("ParadeDB query language", () => {
         id: mockItems.id,
         description: mockItems.description,
         rating: mockItems.rating,
-        agg: search.agg({ value_count: { field: "id" } }).over(),
+        agg: search.agg({ value_count: { field: "id" } }, "threshold").over(),
       })
       .from(mockItems)
       .where(
@@ -952,7 +953,7 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", "description", "rating", pdb.agg('{"value_count":{"field":"id"}}') OVER () from "mock_items" where (("mock_items"."id" @@@ pdb.all()) and ("mock_items"."category" === $1)) order by "mock_items"."rating" desc limit $2`,
+      `select "id", "description", "rating", pdb.agg('{"value_count":{"field":"id"}}', 'threshold') OVER () from "mock_items" where (("mock_items"."id" @@@ pdb.all()) and ("mock_items"."category" === $1)) order by "mock_items"."rating" desc limit $2`,
     );
     expect(generated.params).toStrictEqual(["electronics", 3]);
 

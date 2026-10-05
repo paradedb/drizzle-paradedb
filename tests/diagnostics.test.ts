@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   indexSegments,
   indexes,
+  vectorConfig,
+  vectorEstimatorInfo,
+  vectorInfo,
   verifyAllIndexes,
   verifyIndex,
 } from "../src/diagnostics.js";
@@ -77,5 +80,39 @@ describe("ParadeDB index diagnostics helpers", () => {
     expect(dialect.sqlToQuery(indexes()).sql).toBe(
       "SELECT * FROM pdb.indexes()",
     );
+  });
+
+  it("runs vector diagnostics", () => {
+    const info = dialect.sqlToQuery(vectorInfo("search_idx", "embedding"));
+    expect(info.sql).toBe(
+      "SELECT * FROM paradedb.vector_info($1::regclass, $2::text)",
+    );
+    expect(info.params).toStrictEqual(["search_idx", "embedding"]);
+
+    const config = dialect.sqlToQuery(vectorConfig("search_idx", "embedding"));
+    expect(config.sql).toBe(
+      "SELECT * FROM paradedb.vector_config($1::regclass, $2::text)",
+    );
+    expect(config.params).toStrictEqual(["search_idx", "embedding"]);
+
+    const estimator = dialect.sqlToQuery(
+      vectorEstimatorInfo("search_idx", "embedding"),
+    );
+    expect(estimator.sql).toBe(
+      "SELECT * FROM paradedb.vector_estimator_info($1::regclass, $2::text)",
+    );
+    expect(estimator.params).toStrictEqual(["search_idx", "embedding"]);
+
+    const estimatorWithQueries = dialect.sqlToQuery(
+      vectorEstimatorInfo("search_idx", "embedding", [[0.1, 0.2]]),
+    );
+    expect(estimatorWithQueries.sql).toBe(
+      "SELECT * FROM paradedb.vector_estimator_info($1::regclass, $2::text, ARRAY[$3::vector]::vector[])",
+    );
+    expect(estimatorWithQueries.params).toStrictEqual([
+      "search_idx",
+      "embedding",
+      "[0.1,0.2]",
+    ]);
   });
 });
