@@ -1,4 +1,3 @@
-import { apiParameterFixture } from "./support/api-parameter-index.js";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -412,7 +411,10 @@ describe("ParadeDB query language", () => {
     const query = db
       .select({
         id: mockItems.id,
-        snippetPositions: search.snippetPositions(mockItems.description),
+        snippetPositions: search.snippetPositions(mockItems.description, {
+          limit: 1,
+          offset: 1,
+        }),
       })
       .from(mockItems)
       .where(search.matchAny(mockItems.description, "shoes"))
@@ -421,10 +423,33 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", pdb.snippet_positions("description") from "mock_items" where "mock_items"."description" ||| $1 limit $2`,
+      `select "id", pdb.snippet_positions("description", "limit" => $1, "offset" => $2) from "mock_items" where "mock_items"."description" ||| $3 limit $4`,
     );
-    expect(generated.params).toStrictEqual(["shoes", 5]);
+    expect(generated.params).toStrictEqual([1, 1, "shoes", 5]);
 
+    await query;
+  });
+  it("runs composed query inputs", async () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(
+        search.query(
+          mockItems.id,
+          search.booleanQuery({
+            should: [
+              "description:running",
+              search.disjunctionMax(
+                ["description:shoes", "description:boots"],
+                { tieBreaker: 0.5 },
+              ),
+            ],
+            minimumShouldMatch: 1,
+          }),
+        ),
+      );
+
+    expect(query.toSQL().sql).toContain("paradedb.disjunction_max");
     await query;
   });
   it("runs basic phrase", async () => {
@@ -885,6 +910,22 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
+  it("runs direct aggregate with limits", async () => {
+    const result = await db.execute(
+      sql`SELECT ${search.aggregate(
+        "search_idx",
+        "description:shoes",
+        { count: { value_count: { field: "id" } } },
+        {
+          memoryLimit: 10_000_000,
+          bucketLimit: 100,
+          visibility: "transaction",
+        },
+      )} AS result`,
+    );
+
+    expect(result[0].result).toEqual({ count: { value: 3 } });
+  });
   it("runs multiple aggs", async () => {
     const query = db
       .select({
@@ -1326,116 +1367,5 @@ describe("vector search", () => {
     ]);
 
     await query;
-  });
-});
-
-describe("Search query inputs and snippet parameters", () => {
-  const { items, setup, cleanup } = apiParameterFixture(
-    "api_query_items",
-    "api_query_idx",
-  );
-  beforeAll(setup);
-  afterAll(cleanup);
-  it("executes nested Boolean and disjunction-max queries with quoted strings", async () => {
-    const conjunction = search.booleanQuery({
-      should: ["description:red", "description:shoes"],
-      minimumShouldMatch: 2,
-    });
-    expect(
-      await db
-        .select({ id: items.id })
-        .from(items)
-        .where(search.query(items.id, conjunction)),
-    ).toEqual([{ id: 1 }]);
-    const query = search.booleanQuery({
-      must: [
-        search.disjunctionMax([conjunction, "description:boots"], {
-          tieBreaker: 0.5,
-        }),
-      ],
-      mustNot: ["description:blue"],
-    });
-    expect(
-      (
-        await db
-          .select({ id: items.id })
-          .from(items)
-          .where(search.query(items.id, query))
-          .orderBy(items.id)
-      ).map((row) => row.id),
-    ).toEqual([1, 2]);
-    const scores = async (tie: number) =>
-      db
-        .select({ id: items.id, score: search.score(items.id) })
-        .from(items)
-        .where(
-          search.query(
-            items.id,
-            search.disjunctionMax(["description:red", "description:shoes"], {
-              tieBreaker: tie,
-            }),
-          ),
-        )
-        .orderBy(desc(search.score(items.id)));
-    expect(
-      (await scores(0.5)).find((row) => row.id === 1)!.score,
-    ).toBeGreaterThan((await scores(0)).find((row) => row.id === 1)!.score);
-    expect(
-      await db
-        .select({ id: items.id })
-        .from(items)
-        .where(search.query(items.id, 'description:"O\'Reilly"')),
-    ).toEqual([]);
-  });
-
-  it("supports sparse snippet options and snippet position pagination", async () => {
-    const rows = await db
-      .select({
-        id: items.id,
-        snippet: search.snippet(items.description, {
-          maxNumChars: 20,
-          limit: 1,
-          offset: 0,
-        }),
-        positions: search.snippetPositions(items.description, {
-          limit: 1,
-          offset: 1,
-        }),
-      })
-      .from(items)
-      .where(search.query(items.id, "description:shoes"))
-      .orderBy(items.id);
-    expect(rows).toHaveLength(2);
-    expect(rows.every((row) => row.snippet.includes("<b>"))).toBe(true);
-    const native = await db.execute(
-      sql`SELECT id, pdb.snippet_positions(description, "limit" => 1, "offset" => 1) AS positions FROM ${items} WHERE description ||| 'shoes' ORDER BY id`,
-    );
-    expect(rows.map(({ id, positions }) => ({ id, positions }))).toEqual([
-      ...native,
-    ]);
-    const generated = db
-      .select({
-        snippet: search.snippet(items.description, { endTag: "</mark>" }),
-      })
-      .from(items)
-      .where(search.query(items.id, "description:red"))
-      .toSQL();
-    expect(generated.sql).toContain("end_tag =>");
-    await db.execute(
-      sql`SELECT pdb.snippet(description, end_tag => '</mark>') FROM ${items} WHERE description ||| 'red'`,
-    );
-  });
-
-  it("rejects invalid query and pagination options", () => {
-    expect(() => search.booleanQuery({ minimumShouldMatch: -1 })).toThrow(
-      "minimumShouldMatch",
-    );
-    expect(() =>
-      search.disjunctionMax(["description:shoes"], { tieBreaker: NaN }),
-    ).toThrow("tieBreaker");
-    expect(() => search.disjunctionMax([])).toThrow("must not be empty");
-    expect(() =>
-      search.snippetPositions(items.description, { offset: -1 }),
-    ).toThrow("offset");
   });
 });

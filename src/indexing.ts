@@ -62,25 +62,13 @@ export function paradedbIndex(
         withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
       }
 
-      for (const [name, value] of [
-        ["layer_sizes", options.layerSizes],
-        ["background_layer_sizes", options.backgroundLayerSizes],
-      ] as const) {
-        if (value !== undefined) {
-          if (!value.trim())
-            throw new Error(`${name} must be a non-empty size string`);
-          withOptions[name] = quote(value);
-        }
-      }
+      if (options.layerSizes !== undefined)
+        withOptions.layer_sizes = quote(options.layerSizes);
+      if (options.backgroundLayerSizes !== undefined)
+        withOptions.background_layer_sizes = quote(
+          options.backgroundLayerSizes,
+        );
       if (options.mutableSegmentRows !== undefined) {
-        if (
-          !Number.isInteger(options.mutableSegmentRows) ||
-          options.mutableSegmentRows < 0 ||
-          options.mutableSegmentRows > 10000
-        )
-          throw new Error(
-            "mutableSegmentRows must be an integer between 0 and 10000",
-          );
         withOptions.mutable_segment_rows = String(options.mutableSegmentRows);
       }
       const builder = index(name).using("paradedb", ...fields);

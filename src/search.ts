@@ -51,10 +51,10 @@ export type SnippetOptions = {
   startTag?: string;
   endTag?: string;
   maxNumChars?: number;
-  limit?: number;
-  offset?: number;
 };
 export type SnippetsOptions = SnippetOptions & {
+  limit?: number;
+  offset?: number;
   sortBy?: "score" | "position";
 };
 
@@ -73,7 +73,6 @@ export function snippets(
 }
 
 function renderSnippetOptions(options: SnippetsOptions = {}): SQL {
-  validatePagination(options);
   const args: SQL[] = [];
 
   if (options.startTag !== undefined)
@@ -95,25 +94,9 @@ export function snippetPositions(
   column: SQLWrapper,
   options: { limit?: number; offset?: number } = {},
 ): SQL<[number, number][]> {
-  validatePagination(options);
   return sql<
     [number, number][]
   >`pdb.snippet_positions(${column}${renderSnippetOptions(options)})`;
-}
-
-function validatePagination(options: {
-  limit?: number;
-  offset?: number;
-}): void {
-  for (const [name, value] of Object.entries(options)) {
-    if (
-      (name === "limit" || name === "offset") &&
-      value !== undefined &&
-      (!Number.isInteger(value) || value < 0)
-    ) {
-      throw new Error(`${name} must be a non-negative integer`);
-    }
-  }
 }
 
 export function matchAll(column: SQLWrapper, value: SearchValue): SQL<boolean> {
@@ -393,17 +376,11 @@ function renderStringArray(values: string[]): SQL {
   return sql`ARRAY[${sql.join(values, sql`, `)}]`;
 }
 
-/** Create a searchqueryinput from a query string, including field qualifiers. */
-export function queryInput(
-  value: string,
-  options: { lenient?: boolean; conjunctionMode?: boolean } = {},
-): SQL {
-  return sql`paradedb.parse(${value}, ${options.lenient ?? false}, ${options.conjunctionMode ?? false})`;
-}
-
 type QueryInput = string | SQL;
 function renderQueryInput(value: QueryInput): SQL {
-  return typeof value === "string" ? queryInput(value) : value;
+  return typeof value === "string"
+    ? sql`paradedb.parse(${value}, false, false)`
+    : value;
 }
 function queryArray(values: readonly QueryInput[]): SQL {
   return sql`ARRAY[${sql.join(values.map(renderQueryInput), sql`, `)}]::paradedb.searchqueryinput[]`;
@@ -417,21 +394,14 @@ export function booleanQuery(
     minimumShouldMatch?: number;
   } = {},
 ): SQL {
-  const minimum = options.minimumShouldMatch;
-  if (minimum !== undefined && (!Number.isInteger(minimum) || minimum < 0))
-    throw new Error("minimumShouldMatch must be a non-negative integer");
-  return sql`paradedb.boolean(${queryArray(options.must ?? [])}, ${queryArray(options.should ?? [])}, ${queryArray(options.mustNot ?? [])}, ${minimum ?? null})`;
+  return sql`paradedb.boolean(${queryArray(options.must ?? [])}, ${queryArray(options.should ?? [])}, ${queryArray(options.mustNot ?? [])}, ${options.minimumShouldMatch ?? null})`;
 }
 
 export function disjunctionMax(
   disjuncts: readonly QueryInput[],
   options: { tieBreaker?: number } = {},
 ): SQL {
-  if (!disjuncts.length) throw new Error("disjuncts must not be empty");
-  const tie = options.tieBreaker;
-  if (tie !== undefined && (!Number.isFinite(tie) || tie < 0 || tie > 1))
-    throw new Error("tieBreaker must be between 0 and 1");
-  return sql`paradedb.disjunction_max(${queryArray(disjuncts)}, ${tie ?? null}::real)`;
+  return sql`paradedb.disjunction_max(${queryArray(disjuncts)}, ${options.tieBreaker ?? null}::real)`;
 }
 
 export function query(column: SQLWrapper, value: QueryInput): SQL<boolean> {
@@ -443,20 +413,21 @@ export function aggregate(
   query: QueryInput,
   spec: Record<string, unknown>,
   options: {
-    solveMvcc?: boolean;
     memoryLimit?: number;
     bucketLimit?: number;
-    visibility?: "transaction" | "raw" | "threshold";
+    visibility?: AggregateVisibility;
   } = {},
 ): SQL<Record<string, unknown>> {
-  for (const [name, value] of Object.entries({
-    memoryLimit: options.memoryLimit,
-    bucketLimit: options.bucketLimit,
-  })) {
-    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1))
-      throw new Error(`${name} must be a positive integer`);
-  }
-  if (options.solveMvcc !== undefined && options.visibility !== undefined)
-    throw new Error("Specify solveMvcc or visibility, not both");
-  return sql`paradedb.aggregate(${index}::regclass, ${renderQueryInput(query)}, ${JSON.stringify(spec)}::json, ${options.solveMvcc ?? null}, ${options.memoryLimit ?? 500000000}, ${options.bucketLimit ?? null}, ${options.visibility ?? null})`;
+  const args = [
+    sql`${index}::regclass`,
+    renderQueryInput(query),
+    sql`${JSON.stringify(spec)}::json`,
+  ];
+  if (options.memoryLimit !== undefined)
+    args.push(sql`memory_limit => ${options.memoryLimit}`);
+  if (options.bucketLimit !== undefined)
+    args.push(sql`bucket_limit => ${options.bucketLimit}`);
+  if (options.visibility !== undefined)
+    args.push(sql`visibility => ${options.visibility}`);
+  return sql`paradedb.aggregate(${sql.join(args, sql`, `)})`;
 }

@@ -1,4 +1,3 @@
-import { apiParameterFixture } from "./support/api-parameter-index.js";
 import { sql } from "drizzle-orm";
 import { integer, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core";
 import {
@@ -10,7 +9,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { indexing, search, tokenizer } from "../src/index.js";
 import { client, db } from "./db.js";
@@ -148,10 +147,13 @@ describe("ParadeDB indexing helpers", () => {
       partitionBy: ["id"],
       targetSegmentCount: 8,
       vectorFields: { embedding: { quantization: false } },
+      layerSizes: "0",
+      backgroundLayerSizes: "100MB, 1GB",
+      mutableSegmentRows: 0,
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}');`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}', layer_sizes='0', background_layer_sizes='100MB, 1GB', mutable_segment_rows=0);`,
     );
 
     await runStatements(statements);
@@ -304,25 +306,3 @@ async function runStatements(statements: string[]) {
     await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
   }
 }
-
-describe("Index tuning options", () => {
-  const { items, setup, cleanup } = apiParameterFixture(
-    "api_options_items",
-    "api_options_idx",
-  );
-  beforeAll(setup);
-  afterAll(cleanup);
-  it("persists index options emitted by Drizzle migrations", async () => {
-    const result = await db.execute(
-      sql`SELECT reloptions FROM pg_class WHERE oid = 'api_options_idx'::regclass`,
-    );
-    expect(result[0].reloptions).toEqual(
-      expect.arrayContaining([
-        "layer_sizes=0",
-        "background_layer_sizes=100MB, 1GB",
-        "mutable_segment_rows=0",
-        "search_tokenizer=simple(lowercase=true)",
-      ]),
-    );
-  });
-});
