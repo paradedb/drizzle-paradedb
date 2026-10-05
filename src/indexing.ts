@@ -21,6 +21,8 @@ export type ParadedbIndexOptions = {
   maxLeafSize?: number;
   /** Comma-separated names of single-valued columnar index fields. */
   partitionBy?: string;
+  /** Experimental stacked IVF router; omitted to use the server default. */
+  vectorRouter?: "graph" | "ivf";
   targetSegmentCount?: number;
   vectorFields?: Record<
     string,
@@ -49,6 +51,11 @@ export function paradedbIndex(
         withOptions.max_leaf_size = String(options.maxLeafSize);
       }
 
+      if (options.vectorRouter !== undefined) {
+        if (!["graph", "ivf"].includes(options.vectorRouter))
+          throw new Error("vectorRouter must be graph or ivf");
+        withOptions.vector_router = quote(options.vectorRouter);
+      }
       if (options.partitionBy !== undefined) {
         if (
           !options.partitionBy
