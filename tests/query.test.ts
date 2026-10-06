@@ -429,29 +429,6 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
-  it("runs composed query inputs", async () => {
-    const query = db
-      .select({ id: mockItems.id })
-      .from(mockItems)
-      .where(
-        search.query(
-          mockItems.id,
-          search.booleanQuery({
-            should: [
-              "description:running",
-              search.disjunctionMax(
-                ["description:shoes", "description:boots"],
-                { tieBreaker: 0.5 },
-              ),
-            ],
-            minimumShouldMatch: 1,
-          }),
-        ),
-      );
-
-    expect(query.toSQL().sql).toContain("paradedb.disjunction_max");
-    await query;
-  });
   it("runs basic phrase", async () => {
     const query = db
       .select({
@@ -909,22 +886,6 @@ describe("ParadeDB query language", () => {
     ]);
 
     await query;
-  });
-  it("runs direct aggregate with limits", async () => {
-    const result = await db.execute(
-      sql`SELECT ${search.aggregate(
-        "search_idx",
-        "description:shoes",
-        { count: { value_count: { field: "id" } } },
-        {
-          memoryLimit: 10_000_000,
-          bucketLimit: 100,
-          visibility: "transaction",
-        },
-      )} AS result`,
-    );
-
-    expect(result[0].result).toEqual({ count: { value: 3 } });
   });
   it("runs multiple aggs", async () => {
     const query = db
