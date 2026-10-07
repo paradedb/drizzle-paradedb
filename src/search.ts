@@ -90,8 +90,13 @@ function renderSnippetOptions(options: SnippetsOptions = {}): SQL {
   return args.length ? sql`, ${sql.join(args, sql`, `)}` : sql``;
 }
 
-export function snippetPositions(column: SQLWrapper): SQL<[number, number][]> {
-  return sql<[number, number][]>`pdb.snippet_positions(${column})`;
+export function snippetPositions(
+  column: SQLWrapper,
+  options: { limit?: number; offset?: number } = {},
+): SQL<[number, number][]> {
+  return sql<
+    [number, number][]
+  >`pdb.snippet_positions(${column}${renderSnippetOptions(options)})`;
 }
 
 export function matchAll(column: SQLWrapper, value: SearchValue): SQL<boolean> {

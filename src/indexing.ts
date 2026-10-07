@@ -17,6 +17,9 @@ type IndexField = PgColumn | SQL;
 
 export type ParadedbIndexOptions = {
   searchTokenizer?: Tokenizer;
+  layerSizes?: string;
+  backgroundLayerSizes?: string;
+  mutableSegmentRows?: number;
   trainingSampleRatio?: number;
   maxLeafSize?: number;
   /** Names of single-valued columnar index fields. */
@@ -59,6 +62,15 @@ export function paradedbIndex(
         withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
       }
 
+      if (options.layerSizes !== undefined)
+        withOptions.layer_sizes = quote(options.layerSizes);
+      if (options.backgroundLayerSizes !== undefined)
+        withOptions.background_layer_sizes = quote(
+          options.backgroundLayerSizes,
+        );
+      if (options.mutableSegmentRows !== undefined) {
+        withOptions.mutable_segment_rows = String(options.mutableSegmentRows);
+      }
       const builder = index(name).using("paradedb", ...fields);
       return Object.keys(withOptions).length
         ? builder.with(withOptions)

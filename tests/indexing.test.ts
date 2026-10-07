@@ -147,10 +147,13 @@ describe("ParadeDB indexing helpers", () => {
       partitionBy: ["id"],
       targetSegmentCount: 8,
       vectorFields: { embedding: { quantization: false } },
+      layerSizes: "0",
+      backgroundLayerSizes: "100MB, 1GB",
+      mutableSegmentRows: 0,
     });
 
     expect(statements[1]).toStrictEqual(
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}');`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}', layer_sizes='0', background_layer_sizes='100MB, 1GB', mutable_segment_rows=0);`,
     );
 
     await runStatements(statements);

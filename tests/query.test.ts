@@ -411,7 +411,10 @@ describe("ParadeDB query language", () => {
     const query = db
       .select({
         id: mockItems.id,
-        snippetPositions: search.snippetPositions(mockItems.description),
+        snippetPositions: search.snippetPositions(mockItems.description, {
+          limit: 1,
+          offset: 1,
+        }),
       })
       .from(mockItems)
       .where(search.matchAny(mockItems.description, "shoes"))
@@ -420,9 +423,9 @@ describe("ParadeDB query language", () => {
     const generated = query.toSQL();
 
     expect(generated.sql).toBe(
-      `select "id", pdb.snippet_positions("description") from "mock_items" where "mock_items"."description" ||| $1 limit $2`,
+      `select "id", pdb.snippet_positions("description", "limit" => $1, "offset" => $2) from "mock_items" where "mock_items"."description" ||| $3 limit $4`,
     );
-    expect(generated.params).toStrictEqual(["shoes", 5]);
+    expect(generated.params).toStrictEqual([1, 1, "shoes", 5]);
 
     await query;
   });
