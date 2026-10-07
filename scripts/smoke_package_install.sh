@@ -55,7 +55,6 @@ cat >package.json <<'JSON'
 JSON
 
 # Use the repository's package manager and install the consumer's Drizzle peer.
-# npm currently fails resolving Drizzle's unrelated optional Effect peer.
 pnpm add "drizzle-orm@${DRIZZLE_VERSION}" "${TARBALL}"
 
 cat >smoke.mjs <<JSON
