@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
+### Added
+
+- Index partitioning, target segment count, and vector quantization configuration.
+- Vector storage, configuration, and estimator diagnostics, plus aggregation visibility modes.
+- Snippet-position pagination with `limit` and `offset`.
+- Index layer sizes, background layer sizes, and mutable segment row limits.
+
 ### Changed
 
 - **Breaking:** `paradedbIndex().on()` treats every argument as an indexed field, accepts an expression first, and no longer generates `key_field`. Require ParadeDB 0.26.0 or newer.
@@ -43,6 +52,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.6.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.2.0...v0.3.0
