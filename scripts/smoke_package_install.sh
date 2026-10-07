@@ -14,6 +14,7 @@ cd "${ROOT_DIR}"
 
 PKG_NAME="$(node -p "require('./package.json').name")"
 VERSION="$(node -p "require('./package.json').version")"
+DRIZZLE_VERSION="$(node -p "require('./package.json').peerDependencies['drizzle-orm']")"
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/drizzle-paradedb-smoke.XXXXXX")"
 cleanup() {
@@ -53,7 +54,9 @@ cat >package.json <<'JSON'
 }
 JSON
 
-npm install --no-audit --no-fund --silent "${TARBALL}" >/dev/null
+# Use the repository's package manager and install the consumer's Drizzle peer.
+# npm currently fails resolving Drizzle's unrelated optional Effect peer.
+pnpm add "drizzle-orm@${DRIZZLE_VERSION}" "${TARBALL}"
 
 cat >smoke.mjs <<JSON
 import { integer, PgDialect, pgTable, text } from "drizzle-orm/pg-core";
