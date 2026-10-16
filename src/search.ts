@@ -339,7 +339,7 @@ export class Agg extends SQL {
 
 export type AggregateVisibility = "transaction" | "raw" | "threshold";
 
-/** Combine a facet across GROUP BY groups (ParadeDB 0.26.2+).
+/** Combine a facet across GROUP BY groups.
  * Emits pdb.combine_agg(pdb.agg(...)) OVER ().
  */
 export function combineAgg(
