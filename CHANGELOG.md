@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
+### Added
+
+- Cross-group facets using `search.combineAgg`.
+
+### Changed
+
+- **Breaking:** Require ParadeDB 0.26.2 or newer.
+
 ## [0.6.0] - 2026-10-07
 
 ### Added
@@ -52,6 +62,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.7.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.3.0...v0.4.0

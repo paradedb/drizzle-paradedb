@@ -35,6 +35,40 @@ afterAll(async () => {
 });
 
 describe("ParadeDB query language", () => {
+  it.each([undefined, false, "transaction"] as const)(
+    "combines facets across groups with visibility %s",
+    async (visibility) => {
+      const query = db
+        .select({
+          inStock: mockItems.inStock,
+          groupRows: sql<number>`count(*)::int`,
+          total: search.combineAgg(
+            { value_count: { field: "id" } },
+            visibility,
+          ),
+        })
+        .from(mockItems)
+        .where(search.all(mockItems.id))
+        .groupBy(mockItems.inStock)
+        .orderBy(mockItems.inStock);
+
+      const mode =
+        visibility === undefined
+          ? ""
+          : visibility === false
+            ? ", false"
+            : ", 'transaction'";
+      expect(query.toSQL()).toStrictEqual({
+        sql: `select "in_stock", count(*)::int, pdb.combine_agg(pdb.agg('{"value_count":{"field":"id"}}'${mode})) OVER () from "mock_items" where "mock_items"."id" @@@ pdb.all() group by "mock_items"."in_stock" order by "mock_items"."in_stock"`,
+        params: [],
+      });
+      const rows = await query;
+      expect(rows).toHaveLength(2);
+      const count = rows.reduce((sum, row) => sum + row.groupRows, 0);
+      for (const row of rows) expect(row.total).toStrictEqual({ value: count });
+    },
+  );
+
   it("runs basic matchAll", async () => {
     const query = db
       .select({
