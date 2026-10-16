@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- Cross-group facets using `search.combineAgg` (ParadeDB 0.26.2+).
+
 ## [0.6.0] - 2026-10-07
 
 ### Added

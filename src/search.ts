@@ -339,21 +339,39 @@ export class Agg extends SQL {
 
 export type AggregateVisibility = "transaction" | "raw" | "threshold";
 
+/** Combine a facet across GROUP BY groups (ParadeDB 0.26.2+).
+ * Emits pdb.combine_agg(pdb.agg(...)) OVER ().
+ */
+export function combineAgg(
+  spec: Record<string, unknown>,
+  visibility?: boolean | AggregateVisibility,
+): SQL {
+  return sql`pdb.combine_agg(${aggregateExpression(spec, visibility, true)}) OVER ()`;
+}
+
 export function agg(
   agg: Record<string, unknown>,
   visibility?: boolean | AggregateVisibility,
 ): Agg {
-  const payload = JSON.stringify(agg);
-  const expr =
-    visibility === undefined
+  const expr = aggregateExpression(agg, visibility, false);
+  const windowBaseExpr = aggregateExpression(agg, visibility, true);
+  return new Agg(expr, sql`${windowBaseExpr} OVER ()`, windowBaseExpr);
+}
+
+function aggregateExpression(
+  spec: Record<string, unknown>,
+  visibility: boolean | AggregateVisibility | undefined,
+  inline: boolean,
+): SQL {
+  const payload = JSON.stringify(spec);
+  if (!inline) {
+    return visibility === undefined
       ? sql`pdb.agg(${payload})`
       : sql`pdb.agg(${payload}, ${visibility})`;
-  const windowBaseExpr =
-    visibility === undefined
-      ? sql`pdb.agg(${sql.raw(quote(payload))})`
-      : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof visibility === "string" ? quote(visibility) : String(visibility))})`;
-
-  return new Agg(expr, sql`${windowBaseExpr} OVER ()`, windowBaseExpr);
+  }
+  return visibility === undefined
+    ? sql`pdb.agg(${sql.raw(quote(payload))})`
+    : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof visibility === "string" ? quote(visibility) : String(visibility))})`;
 }
 
 function quote(value: string): string {

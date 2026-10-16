@@ -26,6 +26,7 @@
     "FN_SNIPPETS":           "pdb.snippets",
     "FN_SNIPPET_POSITIONS":  "pdb.snippet_positions",
     "FN_AGG":                "pdb.agg",
+    "FN_COMBINE_AGG":        "pdb.combine_agg",
 
     "FN_INDEX_SEGMENTS":     "pdb.index_segments",
     "FN_INDEXES":            "pdb.indexes",
