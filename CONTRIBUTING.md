@@ -49,11 +49,13 @@ Run the tests to verify every change:
 bash scripts/run_tests.sh
 ```
 
-To run a subset of tests, pass vitest selectors:
+To run a subset of tests, pass Node test runner options and test file paths:
 
 ```bash
-bash scripts/run_tests.sh tests/query.test.ts -t "score"
+bash scripts/run_tests.sh --test-name-pattern=score tests/query.test.ts
 ```
+
+Tests generate `coverage/lcov.info` using Node's built-in coverage reporter.
 
 `pnpm db:setup` starts a ParadeDB container via Docker. `bash scripts/run_tests.sh` also starts the container when needed and passes its connection URL to the tests. Set `DATABASE_URL` to use an existing test database. The default container is `drizzle-paradedb` on port `5432`.
 

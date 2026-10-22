@@ -6,7 +6,9 @@
     "ignoreDeprecations": "6.0",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true
   },
   "include": ["src", "tests", "scripts"]
 }

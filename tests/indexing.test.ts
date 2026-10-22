@@ -9,12 +9,13 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { afterAll, describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { after, describe, it } from "node:test";
 
-import { indexing, search, tokenizer } from "../src/index.js";
-import { client, db } from "./db.js";
+import { indexing, search, tokenizer } from "../src/index.ts";
+import { client, db } from "./db.ts";
 
-afterAll(async () => {
+after(async () => {
   await client.end();
 });
 
@@ -50,7 +51,8 @@ describe("ParadeDB indexing helpers", () => {
     const cur = await generateDrizzleJson({ products });
     const statements = await generateMigration(prev, cur);
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ((("description")::pdb.ngram(3,3,'positions=true')),(("metadata" ->> 'color')::pdb.literal('alias=metadata_color')),(("rating" + 1)::pdb.alias('next_rating'))) WHERE "rating" > 0;`,
     );
 
@@ -94,7 +96,8 @@ describe("ParadeDB indexing helpers", () => {
     const cur = await generateDrizzleJson({ products });
     const statements = await generateMigration(prev, cur);
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
     );
 
@@ -123,7 +126,8 @@ describe("ParadeDB indexing helpers", () => {
     const cur = await generateDrizzleJson({ products });
     const statements = await generateMigration(prev, cur);
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories") WITH (search_tokenizer='simple');`,
     );
 
@@ -133,7 +137,8 @@ describe("ParadeDB indexing helpers", () => {
   it("generates and runs vector field index SQL with opclasses", async () => {
     const statements = await generateVectorIndexStatements();
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops);`,
     );
 
@@ -152,7 +157,8 @@ describe("ParadeDB indexing helpers", () => {
       mutableSegmentRows: 0,
     });
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}', layer_sizes='0', background_layer_sizes='100MB, 1GB', mutable_segment_rows=0);`,
     );
 
@@ -164,21 +170,25 @@ describe("ParadeDB indexing helpers", () => {
       trainingSampleRatio: 0.5,
     });
 
-    expect(statements[1]).toStrictEqual(
+    assert.deepStrictEqual(
+      statements[1],
       `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.5);`,
     );
 
     await runStatements(statements);
   });
 
-  it("applies a paradedb index with drizzle-kit push", async () => {
-    const tempDir = await mkdtemp(
-      join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
-    );
+  it(
+    "applies a paradedb index with drizzle-kit push",
+    { timeout: 60_000 },
+    async () => {
+      const tempDir = await mkdtemp(
+        join(dirname(fileURLToPath(import.meta.url)), "drizzle-kit-"),
+      );
 
-    await writeFile(
-      join(tempDir, "schema.ts"),
-      `import { integer, pgTable, text } from "drizzle-orm/pg-core";
+      await writeFile(
+        join(tempDir, "schema.ts"),
+        `import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { indexing, tokenizer } from "../../src/index";
 
 export const products = pgTable("drizzle_kit_products", {
@@ -193,11 +203,11 @@ export const products = pgTable("drizzle_kit_products", {
   ),
 ]);
 `,
-    );
+      );
 
-    await writeFile(
-      join(tempDir, "drizzle.config.ts"),
-      `import { defineConfig } from "drizzle-kit";
+      await writeFile(
+        join(tempDir, "drizzle.config.ts"),
+        `import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
   schema: "./schema.ts",
@@ -209,30 +219,31 @@ export default defineConfig({
   tablesFilter: "drizzle_kit_products",
 });
 `,
-    );
-
-    await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
-
-    try {
-      await promisify(execFile)(
-        process.execPath,
-        [
-          join(
-            dirname(fileURLToPath(import.meta.url)),
-            "..",
-            "node_modules",
-            "drizzle-kit",
-            "bin.cjs",
-          ),
-          "push",
-          "--config",
-          "drizzle.config.ts",
-          "--force",
-        ],
-        { cwd: tempDir },
       );
 
-      const indexes = await client`
+      await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
+
+      try {
+        await promisify(execFile)(
+          process.execPath,
+          [
+            join(
+              dirname(fileURLToPath(import.meta.url)),
+              "..",
+              "node_modules",
+              "drizzle-kit",
+              "bin.cjs",
+            ),
+            "push",
+            "--config",
+            "drizzle.config.ts",
+            "--force",
+          ],
+          // drizzle-kit transpiles the schema; exclude its transformed copies from coverage.
+          { cwd: tempDir, env: { ...process.env, NODE_V8_COVERAGE: "" } },
+        );
+
+        const indexes = await client`
           SELECT indexdef
           FROM pg_indexes
           WHERE schemaname = 'public'
@@ -240,29 +251,36 @@ export default defineConfig({
             AND indexname = 'drizzle_kit_products_idx'
         `;
 
-      expect(indexes.map((row) => row.indexdef)).toStrictEqual([
-        "CREATE INDEX drizzle_kit_products_idx ON public.drizzle_kit_products USING paradedb (id, ((description)::pdb.simple), category)",
-      ]);
+        assert.deepStrictEqual(
+          indexes.map((row) => row.indexdef),
+          [
+            "CREATE INDEX drizzle_kit_products_idx ON public.drizzle_kit_products USING paradedb (id, ((description)::pdb.simple), category)",
+          ],
+        );
 
-      await db.execute(
-        sql.raw(`
+        await db.execute(
+          sql.raw(`
           INSERT INTO drizzle_kit_products (id, description, category)
           VALUES (1, 'comfortable running shoes', 'footwear')
         `),
-      );
+        );
 
-      const results = await client`
+        const results = await client`
           SELECT id
           FROM drizzle_kit_products
           WHERE description &&& 'running'
         `;
 
-      expect(results.map((row) => row.id)).toStrictEqual([1]);
-    } finally {
-      await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
-      await rm(tempDir, { recursive: true, force: true });
-    }
-  }, 60_000);
+        assert.deepStrictEqual(
+          results.map((row) => row.id),
+          [1],
+        );
+      } finally {
+        await db.execute(sql.raw("DROP TABLE IF EXISTS drizzle_kit_products"));
+        await rm(tempDir, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 async function generateVectorIndexStatements(

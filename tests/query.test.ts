@@ -1,21 +1,22 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { after, before, describe, it } from "node:test";
 
-import { search, tokenizer } from "../src/index.js";
-import { client, db } from "./db.js";
-import { mockItems } from "./mock-items.js";
+import { search, tokenizer } from "../src/index.ts";
+import { client, db } from "./db.ts";
+import { mockItems } from "./mock-items.ts";
 import {
-  MoreLikeThisDocumentOptions,
-  MoreLikeThisOptions,
-} from "../src/search.js";
+  type MoreLikeThisDocumentOptions,
+  type MoreLikeThisOptions,
+} from "../src/search.ts";
 
 const mockItemsWithSerialId = pgTable("mock_items", {
   id: serial("id").primaryKey(),
   description: text("description"),
 });
 
-beforeAll(async () => {
+before(async () => {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
   await db.execute(sql`
     CALL paradedb.create_paradedb_test_table(
@@ -30,14 +31,13 @@ beforeAll(async () => {
   `);
 });
 
-afterAll(async () => {
+after(async () => {
   await client.end();
 });
 
 describe("ParadeDB query language", () => {
-  it.each([undefined, false, "transaction"] as const)(
-    "combines facets across groups with visibility %s",
-    async (visibility) => {
+  for (const visibility of [undefined, false, "transaction"] as const) {
+    it(`combines facets across groups with visibility ${visibility}`, async () => {
       const query = db
         .select({
           inStock: mockItems.inStock,
@@ -58,16 +58,17 @@ describe("ParadeDB query language", () => {
           : visibility === false
             ? ", false"
             : ", 'transaction'";
-      expect(query.toSQL()).toStrictEqual({
+      assert.deepStrictEqual(query.toSQL(), {
         sql: `select "in_stock", count(*)::int, pdb.combine_agg(pdb.agg('{"value_count":{"field":"id"}}'${mode})) OVER () from "mock_items" where "mock_items"."id" @@@ pdb.all() group by "mock_items"."in_stock" order by "mock_items"."in_stock"`,
         params: [],
       });
       const rows = await query;
-      expect(rows).toHaveLength(2);
+      assert.equal(rows.length, 2);
       const count = rows.reduce((sum, row) => sum + row.groupRows, 0);
-      for (const row of rows) expect(row.total).toStrictEqual({ value: count });
-    },
-  );
+      for (const row of rows)
+        assert.deepStrictEqual(row.total, { value: count });
+    });
+  }
 
   it("runs basic matchAll", async () => {
     const query = db
@@ -80,10 +81,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -98,10 +100,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& ARRAY[$1, $2]`,
     );
-    expect(generated.params).toStrictEqual(["running", "shoes"]);
+    assert.deepStrictEqual(generated.params, ["running", "shoes"]);
 
     await query;
   });
@@ -118,10 +121,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& lower($1)`,
     );
-    expect(generated.params).toStrictEqual(["RUNNING SHOES"]);
+    assert.deepStrictEqual(generated.params, ["RUNNING SHOES"]);
 
     await query;
   });
@@ -144,10 +148,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& (select "description" from "mock_items" where "mock_items"."id" = $1)`,
     );
-    expect(generated.params).toStrictEqual([1]);
+    assert.deepStrictEqual(generated.params, [1]);
 
     await query;
   });
@@ -167,10 +172,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.boost(1.5)`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -190,10 +196,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.const(1.5)`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -213,10 +220,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -239,10 +247,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.simple::pdb.const(1.5)`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -262,10 +271,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where (("mock_items"."description")::pdb.alias('description_simple')) ||| $1`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
   });
   it("runs fuzzy with minimal arguments", async () => {
     const query = db
@@ -278,10 +288,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1)`,
     );
-    expect(generated.params).toStrictEqual(["shose"]);
+    assert.deepStrictEqual(generated.params, ["shose"]);
 
     await query;
   });
@@ -301,10 +312,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1::pdb.fuzzy(1, t, f)`,
     );
-    expect(generated.params).toStrictEqual(["shose"]);
+    assert.deepStrictEqual(generated.params, ["shose"]);
 
     await query;
   });
@@ -319,10 +331,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" ||| $1`,
     );
-    expect(generated.params).toStrictEqual(["shose"]);
+    assert.deepStrictEqual(generated.params, ["shose"]);
 
     await query;
   });
@@ -337,10 +350,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."rating" @@@ pdb.exists()`,
     );
-    expect(generated.params).toStrictEqual([]);
+    assert.deepStrictEqual(generated.params, []);
 
     await query;
   });
@@ -357,10 +371,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description", pdb.score("id") from "mock_items" where "mock_items"."description" ||| $1 order by pdb.score("mock_items"."id")`,
     );
-    expect(generated.params).toStrictEqual(["shose"]);
+    assert.deepStrictEqual(generated.params, ["shose"]);
 
     await query;
   });
@@ -376,10 +391,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", pdb.snippet("description") from "mock_items" where "mock_items"."description" ||| $1 limit $2`,
     );
-    expect(generated.params).toStrictEqual(["shoes", 5]);
+    assert.deepStrictEqual(generated.params, ["shoes", 5]);
 
     await query;
   });
@@ -399,10 +415,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", pdb.snippet("description", start_tag => $1, end_tag => $2, max_num_chars => $3) from "mock_items" where "mock_items"."description" ||| $4 limit $5`,
     );
-    expect(generated.params).toStrictEqual(["<i>", "</i>", 15, "shoes", 5]);
+    assert.deepStrictEqual(generated.params, ["<i>", "</i>", 15, "shoes", 5]);
 
     await query;
   });
@@ -425,10 +442,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", pdb.snippets("description", start_tag => $1, end_tag => $2, max_num_chars => $3, "limit" => $4, "offset" => $5, sort_by => $6) from "mock_items" where "mock_items"."description" ||| $7 limit $8`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       "<b>",
       "</b>",
       15,
@@ -456,10 +474,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", pdb.snippet_positions("description", "limit" => $1, "offset" => $2) from "mock_items" where "mock_items"."description" ||| $3 limit $4`,
     );
-    expect(generated.params).toStrictEqual([1, 1, "shoes", 5]);
+    assert.deepStrictEqual(generated.params, [1, 1, "shoes", 5]);
 
     await query;
   });
@@ -474,10 +493,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" ### $1`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -494,10 +514,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" ### $1::pdb.slop(2)`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -517,10 +538,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" ### $1::pdb.simple::pdb.slop(2)`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -535,10 +557,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.phrase_prefix(ARRAY[$1, $2])`,
     );
-    expect(generated.params).toStrictEqual(["running", "sh"]);
+    assert.deepStrictEqual(generated.params, ["running", "sh"]);
 
     await query;
   });
@@ -553,10 +576,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.phrase_prefix(ARRAY[$1, $2], $3)`,
     );
-    expect(generated.params).toStrictEqual(["running", "sh", 3]);
+    assert.deepStrictEqual(generated.params, ["running", "sh", 3]);
 
     await query;
   });
@@ -571,10 +595,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex_phrase(ARRAY[$1, $2])`,
     );
-    expect(generated.params).toStrictEqual(["ru.*", "shoes"]);
+    assert.deepStrictEqual(generated.params, ["ru.*", "shoes"]);
 
     await query;
   });
@@ -594,10 +619,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex_phrase(ARRAY[$1, $2], slop => $3, max_expansions => $4)`,
     );
-    expect(generated.params).toStrictEqual(["ru.*", "shoes", 1, 100]);
+    assert.deepStrictEqual(generated.params, ["ru.*", "shoes", 1, 100]);
 
     await query;
   });
@@ -617,10 +643,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ## $2::int4) ## $3)`,
     );
-    expect(generated.params).toStrictEqual(["sleek", 1, "shoes"]);
+    assert.deepStrictEqual(generated.params, ["sleek", 1, "shoes"]);
 
     await query;
   });
@@ -640,10 +667,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ##> $2::int4) ##> $3)`,
     );
-    expect(generated.params).toStrictEqual(["sleek", 1, "shoes"]);
+    assert.deepStrictEqual(generated.params, ["sleek", 1, "shoes"]);
 
     await query;
   });
@@ -663,10 +691,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ ((pdb.prox_regex($1, $2::int4) ## $3::int4) ## $4)`,
     );
-    expect(generated.params).toStrictEqual(["sl.*", 100, 1, "shoes"]);
+    assert.deepStrictEqual(generated.params, ["sl.*", 100, 1, "shoes"]);
 
     await query;
   });
@@ -688,10 +717,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ ((pdb.prox_array(pdb.prox_regex($1), $2) ## $3::int4) ## $4)`,
     );
-    expect(generated.params).toStrictEqual(["sl.*", "white", 1, "shoes"]);
+    assert.deepStrictEqual(generated.params, ["sl.*", "white", 1, "shoes"]);
 
     await query;
   });
@@ -714,10 +744,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (((($1 ## $2::int4) ## $3) ## $4::int4) ## pdb.prox_array($5, pdb.prox_regex($6)))`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       "sleek",
       1,
       "running",
@@ -746,10 +777,17 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ (($1 ## $2::int4) ## (($3 ## $4::int4) ## $5))`,
     );
-    expect(generated.params).toStrictEqual(["sleek", 1, "running", 1, "shoes"]);
+    assert.deepStrictEqual(generated.params, [
+      "sleek",
+      1,
+      "running",
+      1,
+      "shoes",
+    ]);
 
     await query;
   });
@@ -764,10 +802,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" === $1`,
     );
-    expect(generated.params).toStrictEqual(["running shoes"]);
+    assert.deepStrictEqual(generated.params, ["running shoes"]);
 
     await query;
   });
@@ -782,10 +821,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" === ARRAY[$1, $2]`,
     );
-    expect(generated.params).toStrictEqual(["running", "shoes"]);
+    assert.deepStrictEqual(generated.params, ["running", "shoes"]);
 
     await query;
   });
@@ -800,10 +840,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex($1)`,
     );
-    expect(generated.params).toStrictEqual(["ru.*"]);
+    assert.deepStrictEqual(generated.params, ["ru.*"]);
 
     await query;
   });
@@ -818,10 +859,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.regex($1)::pdb.boost(2)`,
     );
-    expect(generated.params).toStrictEqual(["ru.*"]);
+    assert.deepStrictEqual(generated.params, ["ru.*"]);
 
     await query;
   });
@@ -836,10 +878,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "weight_range" from "mock_items" where "mock_items"."weight_range" @@@ pdb.range_term($1::int4)`,
     );
-    expect(generated.params).toStrictEqual([1]);
+    assert.deepStrictEqual(generated.params, [1]);
 
     await query;
   });
@@ -854,10 +897,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "weight_range" from "mock_items" where "mock_items"."weight_range" @@@ pdb.range_term($1::int4range, $2)`,
     );
-    expect(generated.params).toStrictEqual(["(10, 12]", "Intersects"]);
+    assert.deepStrictEqual(generated.params, ["(10, 12]", "Intersects"]);
 
     await query;
   });
@@ -872,10 +916,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."description" @@@ pdb.all()`,
     );
-    expect(generated.params).toStrictEqual([]);
+    assert.deepStrictEqual(generated.params, []);
 
     await query;
   });
@@ -889,10 +934,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select pdb.agg($1, $2) from "mock_items" where "mock_items"."category" === $3`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"value_count":{"field":"id"}}`,
       "transaction",
       "electronics",
@@ -910,10 +956,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select pdb.agg($1, $2) from "mock_items" where "mock_items"."description" ||| $3`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"value_count":{"field":"id"}}`,
       false,
       "running shoes",
@@ -932,10 +979,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select pdb.agg($1), pdb.agg($2) from "mock_items" where "mock_items"."category" === $3`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"avg":{"field":"rating"}}`,
       `{"value_count":{"field":"id"}}`,
       "electronics",
@@ -957,10 +1005,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select pdb.agg($1) FILTER (WHERE "mock_items"."category" === $2), pdb.agg($3) FILTER (WHERE "mock_items"."category" === $4) from "mock_items"`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"value_count":{"field":"id"}}`,
       "electronics",
       `{"value_count":{"field":"id"}}`,
@@ -989,10 +1038,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description", "rating", pdb.agg('{"value_count":{"field":"id"}}', 'threshold') OVER () from "mock_items" where (("mock_items"."id" @@@ pdb.all()) and ("mock_items"."category" === $1)) order by "mock_items"."rating" desc limit $2`,
     );
-    expect(generated.params).toStrictEqual(["electronics", 3]);
+    assert.deepStrictEqual(generated.params, ["electronics", 3]);
 
     await query;
   });
@@ -1011,10 +1061,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select pdb.agg($1) from "mock_items" where "mock_items"."id" @@@ pdb.all()`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"range":{"field":"rating","ranges":[{"to":3},{"from":3,"to":6}]}}`,
     ]);
 
@@ -1033,10 +1084,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.parse($1)`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       "description:(sleek shoes) AND rating:>3",
     ]);
 
@@ -1058,10 +1110,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.parse($1, lenient => $2, conjunction_mode => $3)`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       "description:(sleek shoes)",
       true,
       true,
@@ -1085,10 +1138,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(document => $1)`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"description":"Sleek running shoes","category":"footwear"}`,
     ]);
 
@@ -1107,10 +1161,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer)`,
     );
-    expect(generated.params).toStrictEqual([12]);
+    assert.deepStrictEqual(generated.params, [12]);
   });
   it("renders more_like_this with a serial id column", () => {
     const query = db
@@ -1123,10 +1178,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer)`,
     );
-    expect(generated.params).toStrictEqual([12]);
+    assert.deepStrictEqual(generated.params, [12]);
   });
   it("runs more_like_this document with options", async () => {
     const options: MoreLikeThisDocumentOptions = {
@@ -1157,10 +1213,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(document => $1, min_term_frequency => $2, min_doc_frequency => $3, max_doc_frequency => $4, max_query_terms => $5, min_word_length => $6, max_word_length => $7, stopwords => ARRAY[$8, $9])`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       `{"description":"Sleek running shoes","category":"footwear"}`,
       2,
       1,
@@ -1195,10 +1252,11 @@ describe("ParadeDB query language", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id", "description" from "mock_items" where "mock_items"."id" @@@ pdb.more_like_this(key_value => $1::integer, fields => ARRAY[$2, $3], min_term_frequency => $4, min_doc_frequency => $5, max_doc_frequency => $6, max_query_terms => $7, min_word_length => $8, max_word_length => $9, stopwords => ARRAY[$10, $11])`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       12,
       "description",
       "category",
@@ -1214,41 +1272,42 @@ describe("ParadeDB query language", () => {
 
     await query;
   });
-  it.each([
+  for (const [index, [tokenizerValue, expectedSqlSnippet]] of (
     [
-      tokenizer.unicodeWords({ remove_emojis: true }),
-      "::pdb.unicode_words('remove_emojis=true')",
-    ],
-    [
-      tokenizer.simple({ stemmer: "english", alias: "simple_description" }),
-      "::pdb.simple('stemmer=english','alias=simple_description')",
-    ],
-    [tokenizer.icu(), "::pdb.icu"],
-    [tokenizer.chineseCompatible(), "::pdb.chinese_compatible"],
-    [tokenizer.jieba(), "::pdb.jieba"],
-    [
-      tokenizer.lindera("chinese", { keep_whitespace: true }),
-      "::pdb.lindera('chinese','keep_whitespace=true')",
-    ],
-    [tokenizer.literal(), "::pdb.literal"],
-    [
-      tokenizer.literalNormalized({ trim: true }),
-      "::pdb.literal_normalized('trim=true')",
-    ],
-    [
-      tokenizer.ngram(3, 3, { positions: true, prefix_only: true }),
-      "::pdb.ngram(3,3,'positions=true','prefix_only=true')",
-    ],
-    [
-      tokenizer.edgeNgram(2, 5, { token_chars: "letter,digit,punctuation" }),
-      "::pdb.edge_ngram(2,5,'token_chars=letter,digit,punctuation')",
-    ],
-    [tokenizer.regexPattern("[a-z]+"), "::pdb.regex_pattern('[a-z]+')"],
-    [tokenizer.sourceCode(), "::pdb.source_code"],
-    [tokenizer.whitespace(), "::pdb.whitespace"],
-  ])(
-    "runs tokenizer variation %#",
-    async (tokenizerValue, expectedSqlSnippet) => {
+      [
+        tokenizer.unicodeWords({ remove_emojis: true }),
+        "::pdb.unicode_words('remove_emojis=true')",
+      ],
+      [
+        tokenizer.simple({ stemmer: "english", alias: "simple_description" }),
+        "::pdb.simple('stemmer=english','alias=simple_description')",
+      ],
+      [tokenizer.icu(), "::pdb.icu"],
+      [tokenizer.chineseCompatible(), "::pdb.chinese_compatible"],
+      [tokenizer.jieba(), "::pdb.jieba"],
+      [
+        tokenizer.lindera("chinese", { keep_whitespace: true }),
+        "::pdb.lindera('chinese','keep_whitespace=true')",
+      ],
+      [tokenizer.literal(), "::pdb.literal"],
+      [
+        tokenizer.literalNormalized({ trim: true }),
+        "::pdb.literal_normalized('trim=true')",
+      ],
+      [
+        tokenizer.ngram(3, 3, { positions: true, prefix_only: true }),
+        "::pdb.ngram(3,3,'positions=true','prefix_only=true')",
+      ],
+      [
+        tokenizer.edgeNgram(2, 5, { token_chars: "letter,digit,punctuation" }),
+        "::pdb.edge_ngram(2,5,'token_chars=letter,digit,punctuation')",
+      ],
+      [tokenizer.regexPattern("[a-z]+"), "::pdb.regex_pattern('[a-z]+')"],
+      [tokenizer.sourceCode(), "::pdb.source_code"],
+      [tokenizer.whitespace(), "::pdb.whitespace"],
+    ] as const
+  ).entries()) {
+    it(`runs tokenizer variation ${index}`, async () => {
       const query = db
         .select({
           id: mockItems.id,
@@ -1264,14 +1323,15 @@ describe("ParadeDB query language", () => {
 
       const generated = query.toSQL();
 
-      expect(generated.sql).toBe(
+      assert.equal(
+        generated.sql,
         `select "id", "description" from "mock_items" where "mock_items"."description" &&& $1${expectedSqlSnippet}`,
       );
-      expect(generated.params).toStrictEqual(["running shoes"]);
+      assert.deepStrictEqual(generated.params, ["running shoes"]);
 
       await query;
-    },
-  );
+    });
+  }
   // There is no tokenizer that accepts boolean positional arguments right now
   // but it's simpler to use the same TokenizerArg type for arguments and options
   // so this unit test checks the boolean rendering codepath.
@@ -1281,7 +1341,7 @@ describe("ParadeDB query language", () => {
       args: [true, false],
       options: { someBool: true },
     });
-    expect(result).toBe(`pdb.mytokenizer(true,false,'someBool=true')`);
+    assert.equal(result, `pdb.mytokenizer(true,false,'someBool=true')`);
   });
 });
 
@@ -1298,10 +1358,11 @@ describe("vector search", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <-> $1 limit $2`,
     );
-    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+    assert.deepStrictEqual(generated.params, [JSON.stringify(queryVector), 5]);
 
     await query;
   });
@@ -1316,10 +1377,11 @@ describe("vector search", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <=> $1 limit $2`,
     );
-    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+    assert.deepStrictEqual(generated.params, [JSON.stringify(queryVector), 5]);
 
     await query;
   });
@@ -1334,10 +1396,11 @@ describe("vector search", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id" from "mock_items" where "mock_items"."id" @@@ pdb.all() order by "mock_items"."embedding" <#> $1 limit $2`,
     );
-    expect(generated.params).toStrictEqual([JSON.stringify(queryVector), 5]);
+    assert.deepStrictEqual(generated.params, [JSON.stringify(queryVector), 5]);
 
     await query;
   });
@@ -1352,10 +1415,11 @@ describe("vector search", () => {
 
     const generated = query.toSQL();
 
-    expect(generated.sql).toBe(
+    assert.equal(
+      generated.sql,
       `select "id" from "mock_items" where "mock_items"."description" ||| $1 order by "mock_items"."embedding" <-> $2 limit $3`,
     );
-    expect(generated.params).toStrictEqual([
+    assert.deepStrictEqual(generated.params, [
       "shoes sneakers",
       JSON.stringify(queryVector),
       2,

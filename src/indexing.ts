@@ -1,4 +1,4 @@
-import { sql, SQL, SQLWrapper } from "drizzle-orm";
+import { sql, SQL, type SQLWrapper } from "drizzle-orm";
 import {
   ExtraConfigColumn,
   index,
@@ -8,8 +8,8 @@ import {
 import {
   renderSearchTokenizer,
   renderTokenizer,
-  Tokenizer,
-} from "./tokenizer.js";
+  type Tokenizer,
+} from "./tokenizer.ts";
 
 export { vector } from "drizzle-orm/pg-core";
 

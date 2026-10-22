@@ -44,7 +44,7 @@
     "db:setup": "bash scripts/run_paradedb.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "node scripts/run_node_tests.mjs",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -52,12 +52,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.0.1",
-    "@vitest/coverage-v8": "^5.0.2",
     "drizzle-kit": "1.0.0-rc.4",
     "postgres": "^3.4.9",
     "prettier": "^3.9.6",
-    "typescript": "6.0.3",
-    "vitest": "^5.0.2"
+    "typescript": "6.0.3"
   },
   "packageManager": "pnpm@11.23.0",
   "engines": {
