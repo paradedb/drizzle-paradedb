@@ -1,5 +1,5 @@
-import { AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
-import { Tokenizer, renderTokenizer } from "./tokenizer.js";
+import { type AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { type Tokenizer, renderTokenizer } from "./tokenizer.ts";
 
 export { cosineDistance, innerProduct, l2Distance } from "drizzle-orm";
 
@@ -182,7 +182,11 @@ function rangeElementCastType(column: AnyColumn): string {
 }
 
 export class ProximityExpr implements SQLWrapper {
-  constructor(private expr: SQL) {}
+  private expr: SQL;
+
+  constructor(expr: SQL) {
+    this.expr = expr;
+  }
 
   getSQL(): SQL {
     return this.expr;
@@ -315,12 +319,13 @@ function collectMoreLikeThisOptions(options: MoreLikeThisOptions): SQL[] {
 }
 
 export class Agg extends SQL {
-  constructor(
-    expr: SQL,
-    private windowExpr: SQL,
-    private windowBaseExpr: SQL = expr,
-  ) {
+  private windowExpr: SQL;
+  private windowBaseExpr: SQL;
+
+  constructor(expr: SQL, windowExpr: SQL, windowBaseExpr: SQL = expr) {
     super(expr.queryChunks);
+    this.windowExpr = windowExpr;
+    this.windowBaseExpr = windowBaseExpr;
   }
 
   filter(where: SQLWrapper): Agg {

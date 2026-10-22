@@ -16,8 +16,8 @@ import {
   paradedbIndex,
   vector,
   vectorField,
-} from "../src/indexing.js";
-import * as tokenizer from "../src/tokenizer.js";
+} from "../src/indexing.ts";
+import * as tokenizer from "../src/tokenizer.ts";
 
 const int4range = customType<{ data: string; driverData: string }>({
   dataType() {

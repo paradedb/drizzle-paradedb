@@ -1,5 +1,6 @@
 import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 import {
   indexSegments,
@@ -9,7 +10,7 @@ import {
   vectorInfo,
   verifyAllIndexes,
   verifyIndex,
-} from "../src/diagnostics.js";
+} from "../src/diagnostics.ts";
 
 const dialect = new PgDialect();
 
@@ -26,10 +27,11 @@ describe("ParadeDB index diagnostics helpers", () => {
       }),
     );
 
-    expect(query.sql).toBe(
+    assert.equal(
+      query.sql,
       "SELECT * FROM pdb.verify_index($1, heapallindexed => $2, sample_rate => $3, report_progress => $4, on_error_stop => $5, verbose => $6, segment_ids => ARRAY[$7, $8]::integer[])",
     );
-    expect(query.params).toStrictEqual([
+    assert.deepStrictEqual(query.params, [
       "search_idx",
       true,
       0.1,
@@ -44,8 +46,8 @@ describe("ParadeDB index diagnostics helpers", () => {
   it("runs verify_index with no options", () => {
     const query = dialect.sqlToQuery(verifyIndex("search_idx"));
 
-    expect(query.sql).toBe("SELECT * FROM pdb.verify_index($1)");
-    expect(query.params).toStrictEqual(["search_idx"]);
+    assert.equal(query.sql, "SELECT * FROM pdb.verify_index($1)");
+    assert.deepStrictEqual(query.params, ["search_idx"]);
   });
 
   it("runs verify_all_indexes", () => {
@@ -57,59 +59,67 @@ describe("ParadeDB index diagnostics helpers", () => {
       }),
     );
 
-    expect(query.sql).toBe(
+    assert.equal(
+      query.sql,
       "SELECT * FROM pdb.verify_all_indexes(schema_pattern => $1, index_pattern => $2, heapallindexed => $3)",
     );
-    expect(query.params).toStrictEqual(["public", "search_%", true]);
+    assert.deepStrictEqual(query.params, ["public", "search_%", true]);
   });
 
   it("runs verify_all_indexes with no options", () => {
     const query = dialect.sqlToQuery(verifyAllIndexes());
 
-    expect(query.sql).toBe("SELECT * FROM pdb.verify_all_indexes()");
-    expect(query.params).toStrictEqual([]);
+    assert.equal(query.sql, "SELECT * FROM pdb.verify_all_indexes()");
+    assert.deepStrictEqual(query.params, []);
   });
 
   it("runs index metadata functions", () => {
-    expect(dialect.sqlToQuery(indexSegments("search_idx")).sql).toBe(
+    assert.equal(
+      dialect.sqlToQuery(indexSegments("search_idx")).sql,
       "SELECT * FROM pdb.index_segments($1)",
     );
-    expect(
+    assert.deepStrictEqual(
       dialect.sqlToQuery(indexSegments("search_idx")).params,
-    ).toStrictEqual(["search_idx"]);
-    expect(dialect.sqlToQuery(indexes()).sql).toBe(
+      ["search_idx"],
+    );
+    assert.equal(
+      dialect.sqlToQuery(indexes()).sql,
       "SELECT * FROM pdb.indexes()",
     );
   });
 
   it("runs vector diagnostics", () => {
     const info = dialect.sqlToQuery(vectorInfo("search_idx", "embedding"));
-    expect(info.sql).toBe(
+    assert.equal(
+      info.sql,
       "SELECT * FROM paradedb.vector_info($1::regclass, $2::text)",
     );
-    expect(info.params).toStrictEqual(["search_idx", "embedding"]);
+    assert.deepStrictEqual(info.params, ["search_idx", "embedding"]);
 
     const config = dialect.sqlToQuery(vectorConfig("search_idx", "embedding"));
-    expect(config.sql).toBe(
+    assert.equal(
+      config.sql,
       "SELECT * FROM paradedb.vector_config($1::regclass, $2::text)",
     );
-    expect(config.params).toStrictEqual(["search_idx", "embedding"]);
+    assert.deepStrictEqual(config.params, ["search_idx", "embedding"]);
 
     const estimator = dialect.sqlToQuery(
       vectorEstimatorInfo("search_idx", "embedding"),
     );
-    expect(estimator.sql).toBe(
+    assert.equal(
+      estimator.sql,
       "SELECT * FROM paradedb.vector_estimator_info($1::regclass, $2::text)",
     );
-    expect(estimator.params).toStrictEqual(["search_idx", "embedding"]);
+    assert.deepStrictEqual(estimator.params, ["search_idx", "embedding"]);
 
     const estimatorWithQueries = dialect.sqlToQuery(
       vectorEstimatorInfo("search_idx", "embedding", [[0.1, 0.2]]),
     );
-    expect(estimatorWithQueries.sql).toBe(
+    assert.equal(
+      estimatorWithQueries.sql,
       "SELECT * FROM paradedb.vector_estimator_info($1::regclass, $2::text, ARRAY[$3::vector]::vector[])",
     );
-    expect(estimatorWithQueries.params).toStrictEqual([
+    assert.deepStrictEqual(estimatorWithQueries.params, [
       "search_idx",
       "embedding",
       "[0.1,0.2]",

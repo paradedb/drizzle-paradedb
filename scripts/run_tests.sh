@@ -4,7 +4,7 @@
 #
 # Runs the full test suite against a local ParadeDB instance. Starts the
 # container via scripts/run_paradedb.sh unless DATABASE_URL is already set.
-# Extra arguments are forwarded to vitest.
+# Extra arguments are forwarded to the Node test runner.
 
 set -euo pipefail
 

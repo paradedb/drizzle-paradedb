@@ -86,7 +86,7 @@ jobs:
       - name: Upload to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: ./coverage/cobertura-coverage.xml
+          files: ./coverage/lcov.info
           flags: drizzle-paradedb,node${{ matrix.node-version }},pg${{ matrix.postgres-version }}
           fail_ci_if_error: false
           verbose: true
