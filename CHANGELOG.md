@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-22
+
+### Changed
+
+- Build JavaScript modules and type declarations directly with the TypeScript compiler.
+- Run tests and collect coverage with Node's built-in test runner.
+
+### Removed
+
+- Unused `tsx` and the `tsup`, Vitest, and Vite development dependency trees, including the vulnerable Vite dependency reported by Dependabot.
+
 ## [0.7.0] - 2026-10-16
 
 ### Added
@@ -62,6 +73,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.7.1]: https://github.com/paradedb/drizzle-paradedb/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.4.0...v0.5.0
