@@ -1,0 +1,15 @@
+{
+  "name": "drizzle-paradedb-example",
+  "version": "1.0.0",
+  "description": "Clean, runnable TypeScript examples demonstrating ParadeDB + Drizzle ORM",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node --loader ts-node/esm src/index.ts"
+  },
+  "dependencies": {
+    "@paradedb/drizzle-paradedb": "workspace:*",
+    "drizzle-orm": "1.0.0-rc.4",
+    "postgres": "^3.4.9"
+  }
+}
