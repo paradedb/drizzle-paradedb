@@ -134,6 +134,35 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
+  it("generates search tokenizer with cjk tokenizer", async () => {
+    const products = pgTable(
+      "indexing_test_products_cjk",
+      {
+        id: integer("id").primaryKey(),
+        content: text("content"),
+      },
+      (table) => [
+        indexing
+          .paradedbIndex("indexing_test_products_cjk_idx", {
+            searchTokenizer: tokenizer.cjk(),
+          })
+          .on(
+            table.id,
+            indexing.paradedbField(table.content, tokenizer.cjk()),
+          ),
+      ],
+    );
+
+    const prev = await generateDrizzleJson({});
+    const cur = await generateDrizzleJson({ products });
+    const statements = await generateMigration(prev, cur);
+
+    assert.deepStrictEqual(
+      statements[1],
+      `CREATE INDEX "indexing_test_products_cjk_idx" ON "indexing_test_products_cjk" USING paradedb ("id",(("content")::pdb.cjk)) WITH (search_tokenizer='cjk');`,
+    );
+  });
+
   it("generates and runs vector field index SQL with opclasses", async () => {
     const statements = await generateVectorIndexStatements();
 

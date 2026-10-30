@@ -19,6 +19,10 @@ export function icu(options?: TokenizerOptions) {
   return { name: "icu", args: [], options };
 }
 
+export function cjk(options?: TokenizerOptions) {
+  return { name: "cjk", args: [], options };
+}
+
 export function chineseCompatible(options?: TokenizerOptions) {
   return { name: "chinese_compatible", args: [], options };
 }
