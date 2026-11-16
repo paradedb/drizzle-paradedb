@@ -1,4 +1,10 @@
-import { type AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
+import {
+  type AnyColumn,
+  getColumnTable,
+  SQL,
+  sql,
+  type SQLWrapper,
+} from "drizzle-orm";
 import { type Tokenizer, renderTokenizer } from "./tokenizer.ts";
 
 export { cosineDistance, innerProduct, l2Distance } from "drizzle-orm";
@@ -105,6 +111,29 @@ export function matchAll(column: SQLWrapper, value: SearchValue): SQL<boolean> {
 
 export function matchAny(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} ||| ${renderSearchValue(value)}`;
+}
+
+export type ExpandOptions = {
+  where?: SQLWrapper;
+};
+
+/** Expand the search text with the synonym rules in the table of `rule`.
+ * Values in `where` go into the SQL as literals, because a parameter there
+ * keeps a prepared statement from using the partial synonym index.
+ */
+export function expand(
+  text: string | SQLWrapper,
+  rule: AnyColumn,
+  options: ExpandOptions = {},
+): SQL {
+  const where =
+    options.where === undefined
+      ? sql``
+      : sql` WHERE ${sql`${options.where}`.inlineParams()}`;
+
+  // The planner uses the synonym index only when the subquery returns the bare
+  // `pdb.expand` call, so a cast such as `fuzzy` wraps the whole subquery.
+  return sql`(SELECT pdb.expand(${text}, ${rule}) FROM ${getColumnTable(rule)}${where})`;
 }
 
 export function phrase(column: SQLWrapper, value: SearchValue): SQL<boolean> {

@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, type SQLWrapper } from "drizzle-orm";
 import { pgTable, serial, text } from "drizzle-orm/pg-core";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -15,6 +15,26 @@ const mockItemsWithSerialId = pgTable("mock_items", {
   id: serial("id").primaryKey(),
   description: text("description"),
 });
+
+const shopSynonyms = pgTable("shop_synonyms", {
+  rule: text("rule").notNull(),
+});
+
+const synonyms = pgTable("synonyms", {
+  setName: text("set_name").notNull(),
+  rule: text("rule").notNull(),
+});
+
+const [{ hasExpand }] = await db.execute<{ hasExpand: boolean }>(
+  sql`SELECT to_regprocedure('pdb.expand(text, text)') IS NOT NULL AS "hasExpand"`,
+);
+
+async function explain(query: SQLWrapper): Promise<string> {
+  const rows = await db.execute<{ "QUERY PLAN": string }>(
+    sql`EXPLAIN (COSTS OFF) ${query.getSQL()}`,
+  );
+  return rows.map((row) => row["QUERY PLAN"]).join("\n");
+}
 
 before(async () => {
   await db.execute(sql`DROP TABLE IF EXISTS mock_items CASCADE`);
@@ -338,6 +358,27 @@ describe("ParadeDB query language", () => {
     assert.deepStrictEqual(generated.params, ["shose"]);
 
     await query;
+  });
+  it("renders expand with the set filter as literals", () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(
+        search.matchAny(
+          mockItems.description,
+          search.boost(
+            search.expand("sofa", synonyms.rule, {
+              where: eq(synonyms.setName, "kids' room"),
+            }),
+            2,
+          ),
+        ),
+      );
+
+    assert.deepStrictEqual(query.toSQL(), {
+      sql: `select "id" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'kids'' room')::pdb.boost(2)`,
+      params: ["sofa"],
+    });
   });
   it("runs basic exists query", async () => {
     const query = db
@@ -1428,3 +1469,107 @@ describe("vector search", () => {
     await query;
   });
 });
+
+describe(
+  "synonym expansion",
+  { skip: hasExpand ? false : "the server has no pdb.expand" },
+  () => {
+    before(async () => {
+      await db.execute(sql`DROP TABLE IF EXISTS shop_synonyms, synonyms`);
+      await db.execute(
+        sql`CREATE TABLE shop_synonyms (rule pdb.synonym_rule NOT NULL)`,
+      );
+      await db.execute(
+        sql`INSERT INTO shop_synonyms VALUES ('sofa, couch, divan')`,
+      );
+      await db.execute(
+        sql`CREATE INDEX shop_synonyms_idx ON shop_synonyms USING paradedb (rule)`,
+      );
+      await db.execute(
+        sql`CREATE TABLE synonyms (set_name text NOT NULL, rule pdb.synonym_rule NOT NULL)`,
+      );
+      await db.execute(
+        sql`INSERT INTO synonyms VALUES ('shop', 'sofa, couch, divan'), ('office', 'couch, keyboard')`,
+      );
+      await db.execute(
+        sql`CREATE INDEX synonyms_shop_idx ON synonyms USING paradedb (rule) WHERE set_name = 'shop'`,
+      );
+      await db.execute(
+        sql`CREATE INDEX synonyms_office_idx ON synonyms USING paradedb (rule) WHERE set_name = 'office'`,
+      );
+    });
+
+    after(async () => {
+      await db.execute(sql`DROP TABLE shop_synonyms, synonyms`);
+    });
+
+    it("runs matchAny with expand on a synonym index", async () => {
+      const query = db
+        .select({ id: mockItems.id, description: mockItems.description })
+        .from(mockItems)
+        .where(
+          search.matchAny(
+            mockItems.description,
+            search.expand("couch", shopSynonyms.rule),
+          ),
+        )
+        .orderBy(mockItems.id);
+
+      assert.deepStrictEqual(query.toSQL(), {
+        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
+        params: ["couch"],
+      });
+      assert.deepStrictEqual(await query, [
+        { id: 24, description: "Classic leather sofa" },
+      ]);
+      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+    });
+
+    it("runs matchAll with a fuzzy expand", async () => {
+      // `lether` matches only with fuzzy, and `couch` only through its rule.
+      const query = db
+        .select({ id: mockItems.id, description: mockItems.description })
+        .from(mockItems)
+        .where(
+          search.matchAll(
+            mockItems.description,
+            search.fuzzy(search.expand("lether couch", shopSynonyms.rule), 1),
+          ),
+        )
+        .orderBy(mockItems.id);
+
+      assert.deepStrictEqual(query.toSQL(), {
+        sql: `select "id", "description" from "mock_items" where "mock_items"."description" &&& (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms")::pdb.fuzzy(1) order by "mock_items"."id"`,
+        params: ["lether couch"],
+      });
+      assert.deepStrictEqual(await query, [
+        { id: 24, description: "Classic leather sofa" },
+      ]);
+      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+    });
+
+    it("runs expand with a set filter on a partial synonym index", async () => {
+      const query = db
+        .select({ id: mockItems.id, description: mockItems.description })
+        .from(mockItems)
+        .where(
+          search.matchAny(
+            mockItems.description,
+            search.expand("couch", synonyms.rule, {
+              where: eq(synonyms.setName, "shop"),
+            }),
+          ),
+        )
+        .orderBy(mockItems.id);
+
+      assert.deepStrictEqual(query.toSQL(), {
+        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'shop') order by "mock_items"."id"`,
+        params: ["couch"],
+      });
+      assert.deepStrictEqual(await query, [
+        { id: 24, description: "Classic leather sofa" },
+      ]);
+      assert.match(await explain(query), /Synonyms: synonyms_shop_idx/);
+    });
+  },
+);
