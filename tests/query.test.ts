@@ -28,6 +28,9 @@ const synonyms = pgTable("synonyms", {
 const [{ hasExpand }] = await db.execute<{ hasExpand: boolean }>(
   sql`SELECT to_regprocedure('pdb.expand(text, text)') IS NOT NULL AS "hasExpand"`,
 );
+const [{ hasExplainScore }] = await db.execute<{ hasExplainScore: boolean }>(
+  sql`SELECT to_regprocedure('pdb.explain_score(anyelement)') IS NOT NULL AS "hasExplainScore"`,
+);
 
 async function explain(query: SQLWrapper): Promise<string> {
   const rows = await db.execute<{ "QUERY PLAN": string }>(
@@ -379,6 +382,31 @@ describe("ParadeDB query language", () => {
       sql: `select "id" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'kids'' room')::pdb.boost(2)`,
       params: ["sofa"],
     });
+  });
+  it("renders parse with an expansion as the query", () => {
+    const query = db
+      .select({ id: mockItems.id })
+      .from(mockItems)
+      .where(
+        search.parse(
+          mockItems.description,
+          search.expand("sleek AND sneakers", shopSynonyms.rule),
+        ),
+      );
+
+    assert.deepStrictEqual(query.toSQL(), {
+      sql: `select "id" from "mock_items" where "mock_items"."description" @@@ (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms")`,
+      params: ["sleek AND sneakers"],
+    });
+    assert.throws(
+      () =>
+        (search.parse as (...args: unknown[]) => unknown)(
+          mockItems.description,
+          search.expand("sofa", shopSynonyms.rule),
+          { lenient: true },
+        ),
+      /parse options do not apply to an expansion/,
+    );
   });
   it("runs basic exists query", async () => {
     const query = db
@@ -1548,6 +1576,46 @@ describe(
       assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
     });
 
+    it("runs phrase with expand", async () => {
+      const query = db
+        .select({ id: mockItems.id, description: mockItems.description })
+        .from(mockItems)
+        .where(
+          search.phrase(
+            mockItems.description,
+            search.expand("leather couch", shopSynonyms.rule),
+          ),
+        )
+        .orderBy(mockItems.id);
+
+      assert.deepStrictEqual(query.toSQL(), {
+        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ### (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
+        params: ["leather couch"],
+      });
+      assert.deepStrictEqual(await query, [
+        { id: 24, description: "Classic leather sofa" },
+      ]);
+      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+    });
+
+    it("runs parse with expand", async () => {
+      const query = db
+        .select({ id: mockItems.id, description: mockItems.description })
+        .from(mockItems)
+        .where(
+          search.parse(
+            mockItems.description,
+            search.expand("leather AND couch", shopSynonyms.rule),
+          ),
+        )
+        .orderBy(mockItems.id);
+
+      assert.deepStrictEqual(await query, [
+        { id: 24, description: "Classic leather sofa" },
+      ]);
+      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+    });
+
     it("runs expand with a set filter on a partial synonym index", async () => {
       const query = db
         .select({ id: mockItems.id, description: mockItems.description })
@@ -1570,6 +1638,33 @@ describe(
         { id: 24, description: "Classic leather sofa" },
       ]);
       assert.match(await explain(query), /Synonyms: synonyms_shop_idx/);
+    });
+  },
+);
+
+describe(
+  "score explanation",
+  { skip: hasExplainScore ? false : "the server has no pdb.explain_score" },
+  () => {
+    it("runs explainScore next to score", async () => {
+      const query = db
+        .select({
+          id: mockItems.id,
+          score: search.score(mockItems.id),
+          explanation: search.explainScore(mockItems.id),
+        })
+        .from(mockItems)
+        .where(search.matchAny(mockItems.description, "shoes"))
+        .orderBy(desc(search.score(mockItems.id)), mockItems.id)
+        .limit(1);
+
+      assert.equal(
+        query.toSQL().sql,
+        `select "id", pdb.score("id"), pdb.explain_score("id") from "mock_items" where "mock_items"."description" ||| $1 order by pdb.score("mock_items"."id") desc, "mock_items"."id" limit $2`,
+      );
+      const [row] = await query;
+      assert.equal(row.explanation.value, row.score);
+      assert.equal(row.explanation.description, "TermQuery, product of...");
     });
   },
 );

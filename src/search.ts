@@ -49,6 +49,18 @@ export function score(column: AnyColumn): SQL<number> {
   return sql<number>`pdb.score(${column})`;
 }
 
+export type ScoreExplanation = {
+  value: number;
+  description: string;
+  details?: ScoreExplanation[];
+  context?: string[];
+};
+
+/** Explain the BM25 score of the row. Pass the same column as to `score`. */
+export function explainScore(column: AnyColumn): SQL<ScoreExplanation> {
+  return sql<ScoreExplanation>`pdb.explain_score(${column})`;
+}
+
 export function exists(column: AnyColumn): SQL<boolean> {
   return sql<boolean>`${column} @@@ pdb.exists()`;
 }
@@ -277,8 +289,21 @@ export type ParseOptions = {
 export function parse(
   column: SQLWrapper,
   query: string,
+  options?: ParseOptions,
+): SQL<boolean>;
+export function parse(column: SQLWrapper, query: SQLWrapper): SQL<boolean>;
+export function parse(
+  column: SQLWrapper,
+  query: string | SQLWrapper,
   options: ParseOptions = {},
 ): SQL<boolean> {
+  // `pdb.parse` takes only text, and `expand` already returns a query.
+  if (typeof query !== "string") {
+    if (Object.keys(options).length > 0)
+      throw new Error("parse options do not apply to an expansion");
+    return sql<boolean>`${column} @@@ ${query}`;
+  }
+
   const args = [sql`${query}`];
 
   if (options.lenient !== undefined)
