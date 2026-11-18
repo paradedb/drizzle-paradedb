@@ -1,5 +1,5 @@
-import { and, desc, eq, sql, type SQLWrapper } from "drizzle-orm";
-import { pgTable, serial, text } from "drizzle-orm/pg-core";
+import { and, desc, eq, gte, inArray, sql, type SQLWrapper } from "drizzle-orm";
+import { alias, pgTable, serial, text } from "drizzle-orm/pg-core";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
@@ -363,26 +363,50 @@ describe("ParadeDB query language", () => {
     await query;
   });
   it("renders expand with the set filter as literals", () => {
-    const query = db
-      .select({ id: mockItems.id })
-      .from(mockItems)
-      .where(
-        search.matchAny(
-          mockItems.description,
-          search.boost(
-            search.expand("sofa", synonyms.rule, {
-              where: eq(synonyms.setName, "kids' room"),
-            }),
-            2,
-          ),
-        ),
-      );
+    const s = alias(synonyms, "s");
+    const cases: [SQLWrapper, string][] = [
+      [
+        search.expand("sofa", synonyms.rule, {
+          where: eq(synonyms.setName, "kids' room"),
+        }),
+        `"synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'kids'' room'`,
+      ],
+      // A backslash can end a plain literal when `standard_conforming_strings` is off.
+      [
+        search.expand("sofa", synonyms.rule, {
+          where: inArray(synonyms.setName, ["shop", "\\' OR true) -- "]),
+        }),
+        `"synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" in ('shop', E'\\\\'' OR true) -- ')`,
+      ],
+      [
+        search.expand("sofa", s.rule, { where: eq(s.setName, "shop") }),
+        `"s"."rule") FROM "synonyms" as "s" WHERE "s"."set_name" = 'shop'`,
+      ],
+    ];
 
-    assert.deepStrictEqual(query.toSQL(), {
-      sql: `select "id" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'kids'' room')::pdb.boost(2)`,
-      params: ["sofa"],
-    });
+    for (const [rules, subquery] of cases) {
+      const query = db
+        .select({ id: mockItems.id })
+        .from(mockItems)
+        .where(search.matchAny(mockItems.description, search.boost(rules, 2)));
+
+      assert.deepStrictEqual(query.toSQL(), {
+        sql: `select "id" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, ${subquery})::pdb.boost(2)`,
+        params: ["sofa"],
+      });
+    }
   });
+
+  it("rejects a placeholder in the set filter of expand", () => {
+    assert.throws(
+      () =>
+        search.expand("sofa", synonyms.rule, {
+          where: eq(synonyms.setName, sql.placeholder("set")),
+        }),
+      /does not take a placeholder/,
+    );
+  });
+
   it("renders parse with an expansion as the query", () => {
     const query = db
       .select({ id: mockItems.id })
@@ -1630,14 +1654,55 @@ describe(
         )
         .orderBy(mockItems.id);
 
-      assert.deepStrictEqual(query.toSQL(), {
-        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "synonyms"."rule") FROM "synonyms" WHERE "synonyms"."set_name" = 'shop') order by "mock_items"."id"`,
-        params: ["couch"],
-      });
       assert.deepStrictEqual(await query, [
         { id: 24, description: "Classic leather sofa" },
       ]);
       assert.match(await explain(query), /Synonyms: synonyms_shop_idx/);
+    });
+
+    it("keeps a backslash of the set filter inside its literal", async () => {
+      const rows = await db.transaction(async (tx) => {
+        // With this setting a backslash escapes the quote of a plain literal.
+        await tx.execute(sql`SET LOCAL standard_conforming_strings = off`);
+        return tx
+          .select({ id: mockItems.id })
+          .from(mockItems)
+          .where(
+            search.matchAny(
+              mockItems.description,
+              search.expand("couch", synonyms.rule, {
+                where: eq(synonyms.setName, "\\' OR true) -- "),
+              }),
+            ),
+          );
+      });
+
+      assert.deepStrictEqual(rows, []);
+    });
+
+    it("reads the partial synonym index in a generic plan", async () => {
+      const rows = await db.transaction(async (tx) => {
+        // A generic plan has no values for bind parameters, and the error
+        // setting fails the query if no synonym index fits.
+        await tx.execute(sql`SET LOCAL plan_cache_mode = force_generic_plan`);
+        await tx.execute(sql`SET LOCAL paradedb.planner_warnings = 'error'`);
+        return tx
+          .select({ id: mockItems.id })
+          .from(mockItems)
+          .where(
+            and(
+              gte(mockItems.rating, 1),
+              search.matchAny(
+                mockItems.description,
+                search.expand("couch", synonyms.rule, {
+                  where: eq(synonyms.setName, "shop"),
+                }),
+              ),
+            ),
+          );
+      });
+
+      assert.deepStrictEqual(rows, [{ id: 24 }]);
     });
   },
 );
@@ -1664,7 +1729,6 @@ describe(
       );
       const [row] = await query;
       assert.equal(row.explanation.value, row.score);
-      assert.equal(row.explanation.description, "TermQuery, product of...");
     });
   },
 );
