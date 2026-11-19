@@ -1,4 +1,22 @@
-import { type AnyColumn, SQL, sql, type SQLWrapper } from "drizzle-orm";
+import {
+  type AnyColumn,
+  Column,
+  getColumnTable,
+  getTableAsAliasSQL,
+  is,
+  isSQLWrapper,
+  Name,
+  Param,
+  Placeholder,
+  SQL,
+  sql,
+  type SQLChunk,
+  type SQLWrapper,
+  StringChunk,
+  Subquery,
+  Table,
+  View,
+} from "drizzle-orm";
 import { type Tokenizer, renderTokenizer } from "./tokenizer.ts";
 
 export { cosineDistance, innerProduct, l2Distance } from "drizzle-orm";
@@ -41,6 +59,17 @@ export function alias(column: SQLWrapper, alias: string): SQL {
 
 export function score(column: AnyColumn): SQL<number> {
   return sql<number>`pdb.score(${column})`;
+}
+
+/** The server can add or rename the other keys of an explanation between releases. */
+export type ScoreExplanation = {
+  value: number;
+  [key: string]: unknown;
+};
+
+/** Explain the BM25 score of the row. Pass the same column as to `score`. */
+export function explainScore(column: AnyColumn): SQL<ScoreExplanation> {
+  return sql<ScoreExplanation>`pdb.explain_score(${column})`;
 }
 
 export function exists(column: AnyColumn): SQL<boolean> {
@@ -105,6 +134,71 @@ export function matchAll(column: SQLWrapper, value: SearchValue): SQL<boolean> {
 
 export function matchAny(column: SQLWrapper, value: SearchValue): SQL<boolean> {
   return sql<boolean>`${column} ||| ${renderSearchValue(value)}`;
+}
+
+export type ExpandOptions = {
+  where?: SQLWrapper;
+};
+
+function literal(value: unknown): SQLChunk {
+  // `inlineParams` doubles only the quotes of a string, so a backslash can end
+  // the literal when `standard_conforming_strings` is off. An `E''` literal
+  // reads the same with both settings.
+  if (typeof value === "string" && value.includes("\\"))
+    return sql.raw(
+      `E'${value.replaceAll("\\", "\\\\").replaceAll("'", "''")}'`,
+    );
+  // `inlineParams` writes a `Date` with `toString`, which Postgres can't read.
+  if (value instanceof Date) return value.toISOString();
+  return value as SQLChunk;
+}
+
+function inlineLiterals(chunk: SQLChunk): SQLChunk {
+  if (Array.isArray(chunk)) return chunk.map(inlineLiterals);
+  if (is(chunk, SQL)) return new SQL(chunk.queryChunks.map(inlineLiterals));
+  if (
+    is(chunk, Placeholder) ||
+    (is(chunk, Param) && is(chunk.value, Placeholder))
+  )
+    throw new Error("expand does not take a placeholder in `where`");
+  if (is(chunk, Param)) {
+    if (chunk.value === null) return chunk;
+    const value = chunk.encoder.mapToDriverValue(chunk.value);
+    if (is(value, SQL)) return inlineLiterals(value);
+    const inlined = literal(value);
+    return inlined === value ? chunk : inlined;
+  }
+  // These chunks are names, not values.
+  if (
+    [StringChunk, Name, Column, Table, View, Subquery].some((kind) =>
+      is(chunk, kind),
+    )
+  )
+    return chunk;
+  if (isSQLWrapper(chunk)) {
+    const inner = inlineLiterals(chunk.getSQL());
+    return chunk.shouldOmitSQLParens?.() ? inner : sql`(${inner})`;
+  }
+  return literal(chunk);
+}
+
+/** Expand the search text with the synonym rules in the table of `rule`.
+ * Values in `where` go into the SQL as literals, because a parameter there
+ * keeps a prepared statement from using the partial synonym index. So a
+ * placeholder in `where` is an error.
+ */
+export function expand(
+  text: string | SQLWrapper,
+  rule: AnyColumn,
+  options: ExpandOptions = {},
+): SQL {
+  const where =
+    options.where === undefined
+      ? sql``
+      : sql` WHERE ${sql`${inlineLiterals(options.where)}`.inlineParams()}`;
+  const rules = getTableAsAliasSQL(getColumnTable(rule));
+
+  return sql`(SELECT pdb.expand(${text}, ${rule}) FROM ${rules}${where})`;
 }
 
 export function phrase(column: SQLWrapper, value: SearchValue): SQL<boolean> {
@@ -248,8 +342,26 @@ export type ParseOptions = {
 export function parse(
   column: SQLWrapper,
   query: string,
+  options?: ParseOptions,
+): SQL<boolean>;
+export function parse(column: SQLWrapper, query: SQLWrapper): SQL<boolean>;
+export function parse(
+  column: SQLWrapper,
+  query: string | SQLWrapper,
+  options?: ParseOptions,
+): SQL<boolean>;
+export function parse(
+  column: SQLWrapper,
+  query: string | SQLWrapper,
   options: ParseOptions = {},
 ): SQL<boolean> {
+  // `pdb.parse` takes only text, and `expand` already returns a query.
+  if (typeof query !== "string") {
+    if (Object.values(options).some((option) => option !== undefined))
+      throw new Error("parse options do not apply to an expansion");
+    return sql<boolean>`${column} @@@ ${query}`;
+  }
+
   const args = [sql`${query}`];
 
   if (options.lenient !== undefined)

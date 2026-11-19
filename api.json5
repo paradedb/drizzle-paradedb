@@ -20,8 +20,10 @@
     "FN_PROX_ARRAY":         "pdb.prox_array",
     "FN_MORE_LIKE_THIS":     "pdb.more_like_this",
     "FN_EXISTS":             "pdb.exists",
+    "FN_EXPAND":             "pdb.expand",
 
     "FN_SCORE":              "pdb.score",
+    "FN_EXPLAIN_SCORE":      "pdb.explain_score",
     "FN_SNIPPET":            "pdb.snippet",
     "FN_SNIPPETS":           "pdb.snippets",
     "FN_SNIPPET_POSITIONS":  "pdb.snippet_positions",
