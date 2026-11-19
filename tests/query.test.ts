@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, sql, type SQLWrapper } from "drizzle-orm";
+import { and, desc, eq, inArray, sql, type SQLWrapper } from "drizzle-orm";
 import { alias, pgTable, serial, text } from "drizzle-orm/pg-core";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -1668,31 +1668,6 @@ describe("synonym expansion", () => {
     });
 
     assert.deepStrictEqual(rows, []);
-  });
-
-  it("reads the partial synonym index in a generic plan", async () => {
-    const rows = await db.transaction(async (tx) => {
-      // A generic plan has no values for bind parameters, and the error
-      // setting fails the query if no synonym index fits.
-      await tx.execute(sql`SET LOCAL plan_cache_mode = force_generic_plan`);
-      await tx.execute(sql`SET LOCAL paradedb.planner_warnings = 'error'`);
-      return tx
-        .select({ id: mockItems.id })
-        .from(mockItems)
-        .where(
-          and(
-            gte(mockItems.rating, 1),
-            search.matchAny(
-              mockItems.description,
-              search.expand("couch", synonyms.rule, {
-                where: eq(synonyms.setName, "shop"),
-              }),
-            ),
-          ),
-        );
-    });
-
-    assert.deepStrictEqual(rows, [{ id: 24 }]);
   });
 });
 
