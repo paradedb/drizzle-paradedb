@@ -25,13 +25,6 @@ const synonyms = pgTable("synonyms", {
   rule: text("rule").notNull(),
 });
 
-const [{ hasExpand }] = await db.execute<{ hasExpand: boolean }>(
-  sql`SELECT to_regprocedure('pdb.expand(text, text)') IS NOT NULL AS "hasExpand"`,
-);
-const [{ hasExplainScore }] = await db.execute<{ hasExplainScore: boolean }>(
-  sql`SELECT to_regprocedure('pdb.explain_score(anyelement)') IS NOT NULL AS "hasExplainScore"`,
-);
-
 async function explain(query: SQLWrapper): Promise<string> {
   const rows = await db.execute<{ "QUERY PLAN": string }>(
     sql`EXPLAIN (COSTS OFF) ${query.getSQL()}`,
@@ -1522,213 +1515,205 @@ describe("vector search", () => {
   });
 });
 
-describe(
-  "synonym expansion",
-  { skip: hasExpand ? false : "the server has no pdb.expand" },
-  () => {
-    before(async () => {
-      await db.execute(sql`DROP TABLE IF EXISTS shop_synonyms, synonyms`);
-      await db.execute(
-        sql`CREATE TABLE shop_synonyms (rule pdb.synonym_rule NOT NULL)`,
-      );
-      await db.execute(
-        sql`INSERT INTO shop_synonyms VALUES ('sofa, couch, divan')`,
-      );
-      await db.execute(
-        sql`CREATE INDEX shop_synonyms_idx ON shop_synonyms USING paradedb (rule)`,
-      );
-      await db.execute(
-        sql`CREATE TABLE synonyms (set_name text NOT NULL, rule pdb.synonym_rule NOT NULL)`,
-      );
-      await db.execute(
-        sql`INSERT INTO synonyms VALUES ('shop', 'sofa, couch, divan'), ('office', 'couch, keyboard')`,
-      );
-      await db.execute(
-        sql`CREATE INDEX synonyms_shop_idx ON synonyms USING paradedb (rule) WHERE set_name = 'shop'`,
-      );
-      await db.execute(
-        sql`CREATE INDEX synonyms_office_idx ON synonyms USING paradedb (rule) WHERE set_name = 'office'`,
-      );
+describe("synonym expansion", () => {
+  before(async () => {
+    await db.execute(sql`DROP TABLE IF EXISTS shop_synonyms, synonyms`);
+    await db.execute(
+      sql`CREATE TABLE shop_synonyms (rule pdb.synonym_rule NOT NULL)`,
+    );
+    await db.execute(
+      sql`INSERT INTO shop_synonyms VALUES ('sofa, couch, divan')`,
+    );
+    await db.execute(
+      sql`CREATE INDEX shop_synonyms_idx ON shop_synonyms USING paradedb (rule)`,
+    );
+    await db.execute(
+      sql`CREATE TABLE synonyms (set_name text NOT NULL, rule pdb.synonym_rule NOT NULL)`,
+    );
+    await db.execute(
+      sql`INSERT INTO synonyms VALUES ('shop', 'sofa, couch, divan'), ('office', 'couch, keyboard')`,
+    );
+    await db.execute(
+      sql`CREATE INDEX synonyms_shop_idx ON synonyms USING paradedb (rule) WHERE set_name = 'shop'`,
+    );
+    await db.execute(
+      sql`CREATE INDEX synonyms_office_idx ON synonyms USING paradedb (rule) WHERE set_name = 'office'`,
+    );
+  });
+
+  after(async () => {
+    await db.execute(sql`DROP TABLE shop_synonyms, synonyms`);
+  });
+
+  it("runs matchAny with expand on a synonym index", async () => {
+    const query = db
+      .select({ id: mockItems.id, description: mockItems.description })
+      .from(mockItems)
+      .where(
+        search.matchAny(
+          mockItems.description,
+          search.expand("couch", shopSynonyms.rule),
+        ),
+      )
+      .orderBy(mockItems.id);
+
+    assert.deepStrictEqual(query.toSQL(), {
+      sql: `select "id", "description" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
+      params: ["couch"],
     });
+    assert.deepStrictEqual(await query, [
+      { id: 24, description: "Classic leather sofa" },
+    ]);
+    assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+  });
 
-    after(async () => {
-      await db.execute(sql`DROP TABLE shop_synonyms, synonyms`);
+  it("runs matchAll with a fuzzy expand", async () => {
+    // `lether` matches only with fuzzy, and `couch` only through its rule.
+    const query = db
+      .select({ id: mockItems.id, description: mockItems.description })
+      .from(mockItems)
+      .where(
+        search.matchAll(
+          mockItems.description,
+          search.fuzzy(search.expand("lether couch", shopSynonyms.rule), 1),
+        ),
+      )
+      .orderBy(mockItems.id);
+
+    assert.deepStrictEqual(query.toSQL(), {
+      sql: `select "id", "description" from "mock_items" where "mock_items"."description" &&& (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms")::pdb.fuzzy(1) order by "mock_items"."id"`,
+      params: ["lether couch"],
     });
+    assert.deepStrictEqual(await query, [
+      { id: 24, description: "Classic leather sofa" },
+    ]);
+    assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+  });
 
-    it("runs matchAny with expand on a synonym index", async () => {
-      const query = db
-        .select({ id: mockItems.id, description: mockItems.description })
-        .from(mockItems)
-        .where(
-          search.matchAny(
-            mockItems.description,
-            search.expand("couch", shopSynonyms.rule),
-          ),
-        )
-        .orderBy(mockItems.id);
+  it("runs phrase with expand", async () => {
+    const query = db
+      .select({ id: mockItems.id, description: mockItems.description })
+      .from(mockItems)
+      .where(
+        search.phrase(
+          mockItems.description,
+          search.expand("leather couch", shopSynonyms.rule),
+        ),
+      )
+      .orderBy(mockItems.id);
 
-      assert.deepStrictEqual(query.toSQL(), {
-        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ||| (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
-        params: ["couch"],
-      });
-      assert.deepStrictEqual(await query, [
-        { id: 24, description: "Classic leather sofa" },
-      ]);
-      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+    assert.deepStrictEqual(query.toSQL(), {
+      sql: `select "id", "description" from "mock_items" where "mock_items"."description" ### (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
+      params: ["leather couch"],
     });
+    assert.deepStrictEqual(await query, [
+      { id: 24, description: "Classic leather sofa" },
+    ]);
+    assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+  });
 
-    it("runs matchAll with a fuzzy expand", async () => {
-      // `lether` matches only with fuzzy, and `couch` only through its rule.
-      const query = db
-        .select({ id: mockItems.id, description: mockItems.description })
-        .from(mockItems)
-        .where(
-          search.matchAll(
-            mockItems.description,
-            search.fuzzy(search.expand("lether couch", shopSynonyms.rule), 1),
-          ),
-        )
-        .orderBy(mockItems.id);
+  it("runs parse with expand", async () => {
+    const query = db
+      .select({ id: mockItems.id, description: mockItems.description })
+      .from(mockItems)
+      .where(
+        search.parse(
+          mockItems.description,
+          search.expand("leather AND couch", shopSynonyms.rule),
+        ),
+      )
+      .orderBy(mockItems.id);
 
-      assert.deepStrictEqual(query.toSQL(), {
-        sql: `select "id", "description" from "mock_items" where "mock_items"."description" &&& (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms")::pdb.fuzzy(1) order by "mock_items"."id"`,
-        params: ["lether couch"],
-      });
-      assert.deepStrictEqual(await query, [
-        { id: 24, description: "Classic leather sofa" },
-      ]);
-      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
-    });
+    assert.deepStrictEqual(await query, [
+      { id: 24, description: "Classic leather sofa" },
+    ]);
+    assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
+  });
 
-    it("runs phrase with expand", async () => {
-      const query = db
-        .select({ id: mockItems.id, description: mockItems.description })
-        .from(mockItems)
-        .where(
-          search.phrase(
-            mockItems.description,
-            search.expand("leather couch", shopSynonyms.rule),
-          ),
-        )
-        .orderBy(mockItems.id);
+  it("runs expand with a set filter on a partial synonym index", async () => {
+    const query = db
+      .select({ id: mockItems.id, description: mockItems.description })
+      .from(mockItems)
+      .where(
+        search.matchAny(
+          mockItems.description,
+          search.expand("couch", synonyms.rule, {
+            where: eq(synonyms.setName, "shop"),
+          }),
+        ),
+      )
+      .orderBy(mockItems.id);
 
-      assert.deepStrictEqual(query.toSQL(), {
-        sql: `select "id", "description" from "mock_items" where "mock_items"."description" ### (SELECT pdb.expand($1, "shop_synonyms"."rule") FROM "shop_synonyms") order by "mock_items"."id"`,
-        params: ["leather couch"],
-      });
-      assert.deepStrictEqual(await query, [
-        { id: 24, description: "Classic leather sofa" },
-      ]);
-      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
-    });
+    assert.deepStrictEqual(await query, [
+      { id: 24, description: "Classic leather sofa" },
+    ]);
+    assert.match(await explain(query), /Synonyms: synonyms_shop_idx/);
+  });
 
-    it("runs parse with expand", async () => {
-      const query = db
-        .select({ id: mockItems.id, description: mockItems.description })
-        .from(mockItems)
-        .where(
-          search.parse(
-            mockItems.description,
-            search.expand("leather AND couch", shopSynonyms.rule),
-          ),
-        )
-        .orderBy(mockItems.id);
-
-      assert.deepStrictEqual(await query, [
-        { id: 24, description: "Classic leather sofa" },
-      ]);
-      assert.match(await explain(query), /Synonyms: shop_synonyms_idx/);
-    });
-
-    it("runs expand with a set filter on a partial synonym index", async () => {
-      const query = db
-        .select({ id: mockItems.id, description: mockItems.description })
+  it("keeps a backslash of the set filter inside its literal", async () => {
+    const rows = await db.transaction(async (tx) => {
+      // With this setting a backslash escapes the quote of a plain literal.
+      await tx.execute(sql`SET LOCAL standard_conforming_strings = off`);
+      return tx
+        .select({ id: mockItems.id })
         .from(mockItems)
         .where(
           search.matchAny(
             mockItems.description,
             search.expand("couch", synonyms.rule, {
-              where: eq(synonyms.setName, "shop"),
+              where: eq(synonyms.setName, "\\' OR true) -- "),
             }),
           ),
-        )
-        .orderBy(mockItems.id);
-
-      assert.deepStrictEqual(await query, [
-        { id: 24, description: "Classic leather sofa" },
-      ]);
-      assert.match(await explain(query), /Synonyms: synonyms_shop_idx/);
+        );
     });
 
-    it("keeps a backslash of the set filter inside its literal", async () => {
-      const rows = await db.transaction(async (tx) => {
-        // With this setting a backslash escapes the quote of a plain literal.
-        await tx.execute(sql`SET LOCAL standard_conforming_strings = off`);
-        return tx
-          .select({ id: mockItems.id })
-          .from(mockItems)
-          .where(
+    assert.deepStrictEqual(rows, []);
+  });
+
+  it("reads the partial synonym index in a generic plan", async () => {
+    const rows = await db.transaction(async (tx) => {
+      // A generic plan has no values for bind parameters, and the error
+      // setting fails the query if no synonym index fits.
+      await tx.execute(sql`SET LOCAL plan_cache_mode = force_generic_plan`);
+      await tx.execute(sql`SET LOCAL paradedb.planner_warnings = 'error'`);
+      return tx
+        .select({ id: mockItems.id })
+        .from(mockItems)
+        .where(
+          and(
+            gte(mockItems.rating, 1),
             search.matchAny(
               mockItems.description,
               search.expand("couch", synonyms.rule, {
-                where: eq(synonyms.setName, "\\' OR true) -- "),
+                where: eq(synonyms.setName, "shop"),
               }),
             ),
-          );
-      });
-
-      assert.deepStrictEqual(rows, []);
+          ),
+        );
     });
 
-    it("reads the partial synonym index in a generic plan", async () => {
-      const rows = await db.transaction(async (tx) => {
-        // A generic plan has no values for bind parameters, and the error
-        // setting fails the query if no synonym index fits.
-        await tx.execute(sql`SET LOCAL plan_cache_mode = force_generic_plan`);
-        await tx.execute(sql`SET LOCAL paradedb.planner_warnings = 'error'`);
-        return tx
-          .select({ id: mockItems.id })
-          .from(mockItems)
-          .where(
-            and(
-              gte(mockItems.rating, 1),
-              search.matchAny(
-                mockItems.description,
-                search.expand("couch", synonyms.rule, {
-                  where: eq(synonyms.setName, "shop"),
-                }),
-              ),
-            ),
-          );
-      });
+    assert.deepStrictEqual(rows, [{ id: 24 }]);
+  });
+});
 
-      assert.deepStrictEqual(rows, [{ id: 24 }]);
-    });
-  },
-);
+describe("score explanation", () => {
+  it("runs explainScore next to score", async () => {
+    const query = db
+      .select({
+        id: mockItems.id,
+        score: search.score(mockItems.id),
+        explanation: search.explainScore(mockItems.id),
+      })
+      .from(mockItems)
+      .where(search.matchAny(mockItems.description, "shoes"))
+      .orderBy(desc(search.score(mockItems.id)), mockItems.id)
+      .limit(1);
 
-describe(
-  "score explanation",
-  { skip: hasExplainScore ? false : "the server has no pdb.explain_score" },
-  () => {
-    it("runs explainScore next to score", async () => {
-      const query = db
-        .select({
-          id: mockItems.id,
-          score: search.score(mockItems.id),
-          explanation: search.explainScore(mockItems.id),
-        })
-        .from(mockItems)
-        .where(search.matchAny(mockItems.description, "shoes"))
-        .orderBy(desc(search.score(mockItems.id)), mockItems.id)
-        .limit(1);
-
-      assert.equal(
-        query.toSQL().sql,
-        `select "id", pdb.score("id"), pdb.explain_score("id") from "mock_items" where "mock_items"."description" ||| $1 order by pdb.score("mock_items"."id") desc, "mock_items"."id" limit $2`,
-      );
-      const [row] = await query;
-      assert.equal(row.explanation.value, row.score);
-    });
-  },
-);
+    assert.equal(
+      query.toSQL().sql,
+      `select "id", pdb.score("id"), pdb.explain_score("id") from "mock_items" where "mock_items"."description" ||| $1 order by pdb.score("mock_items"."id") desc, "mock_items"."id" limit $2`,
+    );
+    const [row] = await query;
+    assert.equal(row.explanation.value, row.score);
+  });
+});
