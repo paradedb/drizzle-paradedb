@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-19
+
 ### Added
 
 - Synonym search using `search.expand`, which builds the `pdb.expand` subquery for `search.matchAny`, `search.matchAll`, `search.phrase` and `search.parse`.
@@ -83,6 +85,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.8.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/paradedb/drizzle-paradedb/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.5.0...v0.6.0
