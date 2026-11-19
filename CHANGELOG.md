@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Require ParadeDB 0.27.0 or newer.
+- **Breaking:** Rename the `paradedbIndex` option `maxLeafSize` to `targetLeafSize` and replace `vectorFields` with `quantization` for ParadeDB 0.27.0.
+
 ## [0.7.1] - 2026-10-22
 
 ### Changed

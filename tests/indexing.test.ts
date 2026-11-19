@@ -135,23 +135,30 @@ describe("ParadeDB indexing helpers", () => {
   });
 
   it("generates and runs vector field index SQL with opclasses", async () => {
-    const statements = await generateVectorIndexStatements();
+    // An index takes one vector field, so each metric gets its own index.
+    for (const [metric, opclass] of [
+      [undefined, "vector_l2_ops"],
+      ["cosine", "vector_cosine_ops"],
+      ["ip", "vector_ip_ops"],
+    ] as const) {
+      const statements = await generateVectorIndexStatements({}, metric);
 
-    assert.deepStrictEqual(
-      statements[1],
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops);`,
-    );
+      assert.deepStrictEqual(
+        statements[1],
+        `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" ${opclass});`,
+      );
 
-    await runStatements(statements);
+      await runStatements(statements);
+    }
   });
 
   it("generates and runs vector index SQL with all build options", async () => {
     const statements = await generateVectorIndexStatements({
       trainingSampleRatio: 0.01,
-      maxLeafSize: 32,
+      targetLeafSize: 32,
       partitionBy: ["id"],
       targetSegmentCount: 8,
-      vectorFields: { embedding: { quantization: false } },
+      quantization: 0,
       layerSizes: "0",
       backgroundLayerSizes: "100MB, 1GB",
       mutableSegmentRows: 0,
@@ -159,7 +166,7 @@ describe("ParadeDB indexing helpers", () => {
 
     assert.deepStrictEqual(
       statements[1],
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.01, max_leaf_size=32, partition_by='id', target_segment_count=8, vector_fields='{"embedding":{"quantization":false}}', layer_sizes='0', background_layer_sizes='100MB, 1GB', mutable_segment_rows=0);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops) WITH (training_sample_ratio=0.01, target_leaf_size=32, partition_by='id', target_segment_count=8, quantization='0', layer_sizes='0', background_layer_sizes='100MB, 1GB', mutable_segment_rows=0);`,
     );
 
     await runStatements(statements);
@@ -172,7 +179,7 @@ describe("ParadeDB indexing helpers", () => {
 
     assert.deepStrictEqual(
       statements[1],
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops,"embedding_cosine" vector_cosine_ops,"embedding_ip" vector_ip_ops) WITH (training_sample_ratio=0.5);`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id",(("description")::pdb.simple),"embedding" vector_l2_ops) WITH (training_sample_ratio=0.5);`,
     );
 
     await runStatements(statements);
@@ -285,6 +292,7 @@ export default defineConfig({
 
 async function generateVectorIndexStatements(
   options: indexing.ParadedbIndexOptions = {},
+  metric?: indexing.VectorMetric,
 ): Promise<string[]> {
   const products = pgTable(
     "indexing_test_products",
@@ -292,8 +300,6 @@ async function generateVectorIndexStatements(
       id: integer("id").primaryKey(),
       description: text("description"),
       embedding: indexing.vector("embedding", { dimensions: 3 }),
-      embeddingCosine: indexing.vector("embedding_cosine", { dimensions: 3 }),
-      embeddingIp: indexing.vector("embedding_ip", { dimensions: 3 }),
     },
     (table) => [
       indexing
@@ -301,9 +307,7 @@ async function generateVectorIndexStatements(
         .on(
           table.id,
           indexing.paradedbField(table.description, tokenizer.simple()),
-          indexing.vectorField(table.embedding),
-          indexing.vectorField(table.embeddingCosine, "cosine"),
-          indexing.vectorField(table.embeddingIp, "ip"),
+          indexing.vectorField(table.embedding, metric),
         ),
     ],
   );

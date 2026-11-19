@@ -21,14 +21,12 @@ export type ParadedbIndexOptions = {
   backgroundLayerSizes?: string;
   mutableSegmentRows?: number;
   trainingSampleRatio?: number;
-  maxLeafSize?: number;
+  targetLeafSize?: number;
   /** Names of single-valued columnar index fields. */
   partitionBy?: readonly string[];
   targetSegmentCount?: number;
-  vectorFields?: Record<
-    string,
-    { quantization?: boolean | { layers: readonly (1 | 2 | 3 | 4)[] } }
-  >;
+  /** Layer widths for all vector fields, or `0` for no quantization. */
+  quantization?: 0 | readonly (1 | 2 | 3 | 4)[];
 };
 
 export function paradedbIndex(
@@ -48,8 +46,8 @@ export function paradedbIndex(
       if (options.trainingSampleRatio !== undefined) {
         withOptions.training_sample_ratio = String(options.trainingSampleRatio);
       }
-      if (options.maxLeafSize !== undefined) {
-        withOptions.max_leaf_size = String(options.maxLeafSize);
+      if (options.targetLeafSize !== undefined) {
+        withOptions.target_leaf_size = String(options.targetLeafSize);
       }
 
       if (options.partitionBy !== undefined) {
@@ -58,8 +56,8 @@ export function paradedbIndex(
       if (options.targetSegmentCount !== undefined) {
         withOptions.target_segment_count = String(options.targetSegmentCount);
       }
-      if (options.vectorFields !== undefined) {
-        withOptions.vector_fields = quote(JSON.stringify(options.vectorFields));
+      if (options.quantization !== undefined) {
+        withOptions.quantization = quote(JSON.stringify(options.quantization));
       }
 
       if (options.layerSizes !== undefined)
