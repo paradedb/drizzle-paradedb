@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-21
+
+### Changed
+
+- **Breaking:** Require Drizzle ORM 1.0.0-rc.6 and use the matching Drizzle Kit release. Drizzle removed the `.concurrently()` index builder method in this release.
+
 ## [0.8.0] - 2026-11-19
 
 ### Added
@@ -85,6 +91,7 @@ All notable changes to this project will be documented in this file. The format 
 
 - Support for the ParadeDB query language, index management, and diagnostics.
 
+[0.9.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/paradedb/drizzle-paradedb/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/paradedb/drizzle-paradedb/compare/v0.6.0...v0.7.0
