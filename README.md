@@ -43,7 +43,7 @@ The official [Drizzle](https://orm.drizzle.team/) integration for ParadeDB. Get 
 | Component            | Supported                                                                                                                     |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Node                 | 22.12+                                                                                                                        |
-| Drizzle ORM          | 1.0+                                                                                                                          |
+| Drizzle              | 1.0+                                                                                                                          |
 | PostgreSQL           | 15+                                                                                                                           |
 | pgvector             | 0.7.0+ (provides vector types for ParadeDB’s [native vector search](https://www.paradedb.com/docs/reference/vector/overview)) |
 | ParadeDB / pg_search | 0.27.0+                                                                                                                       |
