@@ -59,7 +59,7 @@ describe("ParadeDB indexing helpers", () => {
     await runStatements(statements);
   });
 
-  it("generates and runs array, expression, multi-tokenizer, and search tokenizer index SQL", async () => {
+  it("generates and runs array, expression, multi-tokenizer, concurrent, and search tokenizer index SQL", async () => {
     const products = pgTable(
       "indexing_test_products",
       {
@@ -87,7 +87,8 @@ describe("ParadeDB indexing helpers", () => {
               table.description,
               tokenizer.simple({ alias: "description_simple" }),
             ),
-          ),
+          )
+          .concurrently(),
       ],
     );
 
@@ -97,7 +98,7 @@ describe("ParadeDB indexing helpers", () => {
 
     assert.deepStrictEqual(
       statements[1],
-      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
+      `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
     );
 
     await runStatements(statements);
