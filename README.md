@@ -48,6 +48,10 @@ The official [Drizzle](https://orm.drizzle.team/) integration for ParadeDB. Get 
 | pgvector             | 0.7.0+ (provides vector types for ParadeDB’s [native vector search](https://www.paradedb.com/docs/reference/vector/overview)) |
 | ParadeDB / pg_search | 0.27.0+                                                                                                                       |
 
+### Concurrent index builds
+
+With Drizzle 1.0.0-rc.6, run `CREATE INDEX CONCURRENTLY ... USING paradedb` as a standalone SQL statement outside the Drizzle migration transaction. Drizzle Kit generates regular `CREATE INDEX` statements, so when applying an index concurrently, run the index statement separately.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, running tests, linting, and the PR workflow.
