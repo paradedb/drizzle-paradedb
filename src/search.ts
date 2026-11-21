@@ -196,7 +196,7 @@ export function expand(
     options.where === undefined
       ? sql``
       : sql` WHERE ${sql`${inlineLiterals(options.where)}`.inlineParams()}`;
-  const rules = getTableAsAliasSQL(getColumnTable(rule));
+  const rules = new SQL(getTableAsAliasSQL(getColumnTable(rule)));
 
   return sql`(SELECT pdb.expand(${text}, ${rule}) FROM ${rules}${where})`;
 }
@@ -480,12 +480,13 @@ function aggregateExpression(
   visibility: boolean | AggregateVisibility | undefined,
   inline: boolean,
 ): SQL {
-  const payload = JSON.stringify(spec);
   if (!inline) {
+    const payload = sql.param(spec);
     return visibility === undefined
       ? sql`pdb.agg(${payload})`
       : sql`pdb.agg(${payload}, ${visibility})`;
   }
+  const payload = JSON.stringify(spec);
   return visibility === undefined
     ? sql`pdb.agg(${sql.raw(quote(payload))})`
     : sql`pdb.agg(${sql.raw(quote(payload))}, ${sql.raw(typeof visibility === "string" ? quote(visibility) : String(visibility))})`;

@@ -1,6 +1,6 @@
 {
   "name": "@paradedb/drizzle-paradedb",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "The official Drizzle integration for ParadeDB.",
   "keywords": [
     "paradedb",
@@ -48,11 +48,11 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "drizzle-orm": "1.0.0-rc.4"
+    "drizzle-orm": "1.0.0-rc.6"
   },
   "devDependencies": {
     "@types/node": "^26.0.1",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.6",
     "postgres": "^3.4.9",
     "prettier": "^3.9.6",
     "typescript": "7.0.2"

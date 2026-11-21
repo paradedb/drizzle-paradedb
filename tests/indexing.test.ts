@@ -87,8 +87,7 @@ describe("ParadeDB indexing helpers", () => {
               table.description,
               tokenizer.simple({ alias: "description_simple" }),
             ),
-          )
-          .concurrently(),
+          ),
       ],
     );
 
@@ -98,10 +97,23 @@ describe("ParadeDB indexing helpers", () => {
 
     assert.deepStrictEqual(
       statements[1],
-      `CREATE INDEX CONCURRENTLY "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
+      `CREATE INDEX "indexing_test_products_idx" ON "indexing_test_products" USING paradedb ("id","categories",(("tags")::pdb.literal),(("description" || ' ' || "category")::pdb.simple('alias=description_concat')),(("description")::pdb.literal),(("description")::pdb.simple('alias=description_simple'))) WITH (search_tokenizer='simple(lowercase=false)');`,
     );
 
-    await runStatements(statements);
+    const [createTable, createIndex] = statements;
+    await runStatements(
+      [
+        createTable,
+        createIndex.replace(/^CREATE INDEX /, "CREATE INDEX CONCURRENTLY "),
+      ],
+      async () => {
+        const [index] = await client<{ indisvalid: boolean }[]>`
+        SELECT indisvalid FROM pg_index
+        WHERE indexrelid = 'indexing_test_products_idx'::regclass
+      `;
+        assert.equal(index.indisvalid, true);
+      },
+    );
   });
   it("generates search tokenizer with no arguments", async () => {
     const products = pgTable(
@@ -239,7 +251,7 @@ export default defineConfig({
               "..",
               "node_modules",
               "drizzle-kit",
-              "bin.cjs",
+              "bin.js",
             ),
             "push",
             "--config",
@@ -317,13 +329,17 @@ async function generateVectorIndexStatements(
   return generateMigration(prev, cur);
 }
 
-async function runStatements(statements: string[]) {
+async function runStatements(
+  statements: string[],
+  verify?: () => Promise<void>,
+) {
   await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
 
   try {
     for (const statement of statements) {
-      await db.execute(sql.raw(statement));
+      await client.unsafe(statement);
     }
+    await verify?.();
   } finally {
     await db.execute(sql.raw(`DROP TABLE IF EXISTS indexing_test_products`));
   }

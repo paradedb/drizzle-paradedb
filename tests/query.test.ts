@@ -1025,7 +1025,7 @@ describe("ParadeDB query language", () => {
       `select pdb.agg($1, $2) from "mock_items" where "mock_items"."category" === $3`,
     );
     assert.deepStrictEqual(generated.params, [
-      `{"value_count":{"field":"id"}}`,
+      { value_count: { field: "id" } },
       "transaction",
       "electronics",
     ]);
@@ -1047,7 +1047,7 @@ describe("ParadeDB query language", () => {
       `select pdb.agg($1, $2) from "mock_items" where "mock_items"."description" ||| $3`,
     );
     assert.deepStrictEqual(generated.params, [
-      `{"value_count":{"field":"id"}}`,
+      { value_count: { field: "id" } },
       false,
       "running shoes",
     ]);
@@ -1070,8 +1070,8 @@ describe("ParadeDB query language", () => {
       `select pdb.agg($1), pdb.agg($2) from "mock_items" where "mock_items"."category" === $3`,
     );
     assert.deepStrictEqual(generated.params, [
-      `{"avg":{"field":"rating"}}`,
-      `{"value_count":{"field":"id"}}`,
+      { avg: { field: "rating" } },
+      { value_count: { field: "id" } },
       "electronics",
     ]);
 
@@ -1096,9 +1096,9 @@ describe("ParadeDB query language", () => {
       `select pdb.agg($1) FILTER (WHERE "mock_items"."category" === $2), pdb.agg($3) FILTER (WHERE "mock_items"."category" === $4) from "mock_items"`,
     );
     assert.deepStrictEqual(generated.params, [
-      `{"value_count":{"field":"id"}}`,
+      { value_count: { field: "id" } },
       "electronics",
-      `{"value_count":{"field":"id"}}`,
+      { value_count: { field: "id" } },
       "footwear",
     ]);
 
@@ -1152,7 +1152,7 @@ describe("ParadeDB query language", () => {
       `select pdb.agg($1) from "mock_items" where "mock_items"."id" @@@ pdb.all()`,
     );
     assert.deepStrictEqual(generated.params, [
-      `{"range":{"field":"rating","ranges":[{"to":3},{"from":3,"to":6}]}}`,
+      { range: { field: "rating", ranges: [{ to: 3 }, { from: 3, to: 6 }] } },
     ]);
 
     await query;
